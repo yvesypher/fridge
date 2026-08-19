@@ -1,0 +1,371 @@
+/* fridge-only composition styles. Plot and hierarchy styles are inherited
+   from the installed ggelato package by R/fridge.R. */
+
+/* ===== fridge: LinkVis-style linked multi-widget dashboard ===== */
+html.fridge-fullscreen-page,
+body.fridge-fullscreen-page {
+  width: 100% !important; height: 100% !important; margin: 0 !important;
+  padding: 0 !important; overflow: hidden !important;
+}
+.fridge-fullscreen-host {
+  position: fixed !important; inset: 0 !important; z-index: 2147483000;
+  width: 100vw !important; height: 100vh !important;
+  min-width: 100vw !important; min-height: 100vh !important;
+  max-width: none !important; max-height: none !important;
+  margin: 0 !important; padding: 0 !important;
+}
+.fridge-embedded-host {
+  position: relative !important;
+  inset: auto !important;
+  z-index: auto !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  isolation: isolate;
+}
+.fridge-widget {
+  position: relative; width: 100%; height: 100%; min-height: 0;
+  box-sizing: border-box; overflow: hidden; overscroll-behavior: none;
+  background: #eef0f2; color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.fridge-widget * { box-sizing: border-box; }
+
+/* Plot windows */
+.fridge-window {
+  position: absolute; display: flex; flex-direction: column; overflow: visible;
+  min-width: 180px; min-height: 140px; background: #fff;
+  border: 1px solid rgba(15,23,42,.07); border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(15,23,42,.1); z-index: 10;
+  transition: box-shadow .18s, border-color .18s;
+  contain: layout style;
+}
+.fridge-window.active {
+  border-color: rgba(0,114,178,.75); box-shadow: 0 8px 30px rgba(15,23,42,.2);
+}
+.fridge-window-header {
+  height: 32px; flex: 0 0 32px; display: flex; align-items: center;
+  justify-content: space-between; gap: 8px; padding: 0 8px 0 11px;
+  border-bottom: 1px solid #e9edf1; border-radius: 8px 8px 0 0;
+  background: #f8f9fa; cursor: grab; user-select: none;
+}
+.fridge-window-header:active { cursor: grabbing; }
+.fridge-window-title {
+  min-width: 40px; max-width: calc(100% - 64px); overflow: hidden;
+  color: #475569; font-size: 13px; font-weight: 600; line-height: 23px;
+  text-overflow: ellipsis; white-space: nowrap; cursor: text;
+}
+.fridge-window-title.editing {
+  padding: 0 5px; outline: 2px solid rgba(0,114,178,.25);
+  border-radius: 4px; background: #fff; color: #0f172a; user-select: text;
+}
+.fridge-window-controls { display: flex; align-items: center; gap: 2px; flex: none; }
+.fridge-window-btn {
+  position: relative; flex: 0 0 26px; width: 26px; height: 26px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 4px; background: transparent; color: #64748b; cursor: pointer;
+}
+.fridge-window-btn:hover { background: rgba(15,23,42,.08); color: #0f172a; }
+.fridge-window-btn .gig-icon-svg { width: 15px; height: 15px; }
+.fridge-window-content {
+  position: relative; flex: 1; min-width: 0; min-height: 0; overflow: hidden;
+  padding: 0; border-radius: 0 0 8px 8px; background: #fff;
+  contain: layout style;
+}
+.fridge-fullscreen-host > .fridge-widget {
+  width: 100vw; height: 100vh; min-height: 100vh;
+}
+.fridge-embedded-host > .fridge-widget {
+  width: 100% !important; height: 100% !important; min-height: 0 !important;
+}
+.fridge-window-content.gig-stldp-main { padding: 8px 10px; }
+.fridge-window-content.gig-point-main,
+.fridge-window-content.gig-sunburst-main { padding: 6px; }
+.fridge-window-content.gig-point-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fridge-window-content .gig-scatter-grid {
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+  transition: none !important;
+  contain: layout size style;
+}
+.fridge-window-content .gig-chart-wrap {
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  contain: strict;
+}
+.fridge-window-content .gig-chart-wrap canvas {
+  display: block;
+  max-width: none;
+  max-height: none;
+  transition: none !important;
+}
+.fridge-window-content .gig-sun-wrap,
+.fridge-window-content .gig-sun-wrap svg { width: 100%; height: 100%; display: block; }
+.fridge-window.has-hierarchy-widget .fridge-window-content { overflow: visible; }
+
+/* Eight resize handles per plot window */
+.fridge-resizer { position: absolute; z-index: 10005; background: transparent; }
+.fridge-resizer.n, .fridge-resizer.s { right: 6px; left: 6px; height: 10px; cursor: ns-resize; }
+.fridge-resizer.e, .fridge-resizer.w { top: 6px; bottom: 6px; width: 10px; cursor: ew-resize; }
+.fridge-resizer.nw, .fridge-resizer.ne,
+.fridge-resizer.sw, .fridge-resizer.se { width: 12px; height: 12px; }
+.fridge-resizer.n, .fridge-resizer.nw, .fridge-resizer.ne { top: -5px; }
+.fridge-resizer.s, .fridge-resizer.sw, .fridge-resizer.se { bottom: -5px; }
+.fridge-resizer.e, .fridge-resizer.ne, .fridge-resizer.se { right: -5px; }
+.fridge-resizer.w, .fridge-resizer.nw, .fridge-resizer.sw { left: -5px; }
+.fridge-resizer.nw, .fridge-resizer.se { cursor: nwse-resize; }
+.fridge-resizer.ne, .fridge-resizer.sw { cursor: nesw-resize; }
+
+/* Window snapping palette */
+.fridge-snap-wrap { position: relative; flex: 0 0 26px; }
+.fridge-snap-menu {
+  position: absolute; top: 31px; right: -7px; z-index: 15000;
+  width: 242px; padding: 11px; display: none;
+  grid-template-columns: repeat(3, 1fr); gap: 9px;
+  border: 1px solid #454545; border-radius: 8px; background: #2b2b2b;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+}
+.fridge-snap-menu.visible { display: grid; }
+.fridge-snap-group { display: flex; gap: 3px; width: 100%; height: 48px; }
+.fridge-snap-zone {
+  min-width: 0; min-height: 0; padding: 0; border: 1px solid #6b6b6b;
+  border-radius: 2px; background: #505050; cursor: pointer;
+}
+.fridge-snap-zone:hover { border-color: #0078d4; background: #0078d4; }
+.fridge-snap-group.layout-50,
+.fridge-snap-group.layout-66,
+.fridge-snap-group.layout-33 { flex-direction: row; }
+.fridge-snap-group.layout-50 .fridge-snap-zone { flex: 1; }
+.fridge-snap-group.layout-66 .fridge-snap-zone:first-child { flex: 2; }
+.fridge-snap-group.layout-66 .fridge-snap-zone:last-child { flex: 1; }
+.fridge-snap-group.layout-33 .fridge-snap-zone:first-child { flex: 1; }
+.fridge-snap-group.layout-33 .fridge-snap-zone:last-child { flex: 2; }
+.fridge-snap-group.layout-grid,
+.fridge-snap-group.layout-3-left,
+.fridge-snap-group.layout-3-right {
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px;
+}
+.fridge-snap-group.layout-3-left .fridge-snap-zone:first-child { grid-row: 1 / 3; }
+.fridge-snap-group.layout-3-right .fridge-snap-zone:last-child { grid-column: 2; grid-row: 1 / 3; }
+.fridge-snap-overlay {
+  position: absolute; z-index: 14000; display: none; pointer-events: none;
+  border: 3px dashed #0072b2; border-radius: 12px; background: rgba(0,114,178,.15);
+}
+.fridge-snap-assist {
+  position: absolute; z-index: 13000; display: none; flex-wrap: wrap;
+  align-items: center; justify-content: center; gap: 12px; padding: 14px;
+  overflow: auto; border-radius: 12px; background: rgba(15,23,42,.5);
+  backdrop-filter: blur(7px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22);
+}
+.fridge-snap-assist-card {
+  width: 120px; height: 102px; padding: 12px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 7px;
+  border: 1px solid rgba(255,255,255,.8); border-radius: 11px;
+  background: rgba(255,255,255,.94); color: #334155; cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,0,0,.16); font: 700 11px/1.25 inherit;
+}
+.fridge-snap-assist-card:hover { transform: translateY(-3px); background: #fff; }
+.fridge-snap-assist-card.skip { background: rgba(15,23,42,.82); color: #fff; }
+.fridge-assist-icon .gig-icon-svg { width: 28px; height: 28px; }
+
+/* Shared hierarchy panel. Its contents are rendered and styled by ggelato. */
+.fridge-hierarchy-panel {
+  position: absolute; overflow: visible; background: #fff;
+  border: 1px solid rgba(15,23,42,.07);
+  z-index: 12000; width: 158px; height: 176px; min-width: 120px; min-height: 80px;
+  padding: 10px; border-radius: 10px; cursor: grab;
+  box-shadow: 0 5px 20px rgba(15,23,42,.16);
+}
+.fridge-hierarchy-panel:active { cursor: grabbing; }
+.fridge-hierarchy-panel-inner {
+  position: absolute; left: 50%; top: 50%; max-height: none;
+  overflow: visible; transform-origin: center center; will-change: transform;
+}
+.fridge-hierarchy-widget-host { position: relative; width: max-content; height: max-content; }
+.fridge-hierarchy-widget-host > .hierarchy-addon-container {
+  position: relative; inset: auto; top: auto; right: auto; left: auto;
+  min-width: 0; min-height: 0; margin: 0; transform: none;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  pointer-events: none;
+}
+.fridge-hierarchy-widget-host .hierarchy-inner {
+  padding: 0; transform: none;
+}
+.fridge-hierarchy-widget-host .hierarchy-value-dropdown {
+  z-index: 17000;
+}
+.fridge-hierarchy-resize-handle {
+  position: absolute; z-index: 17010; background: transparent;
+}
+.fridge-hierarchy-resize-handle.n,
+.fridge-hierarchy-resize-handle.s {
+  right: 10px; left: 10px; height: 10px; cursor: ns-resize;
+}
+.fridge-hierarchy-resize-handle.e,
+.fridge-hierarchy-resize-handle.w {
+  top: 10px; bottom: 10px; width: 10px; cursor: ew-resize;
+}
+.fridge-hierarchy-resize-handle.nw,
+.fridge-hierarchy-resize-handle.ne,
+.fridge-hierarchy-resize-handle.sw,
+.fridge-hierarchy-resize-handle.se { width: 15px; height: 15px; }
+.fridge-hierarchy-resize-handle.n,
+.fridge-hierarchy-resize-handle.nw,
+.fridge-hierarchy-resize-handle.ne { top: -5px; }
+.fridge-hierarchy-resize-handle.s,
+.fridge-hierarchy-resize-handle.sw,
+.fridge-hierarchy-resize-handle.se { bottom: -5px; }
+.fridge-hierarchy-resize-handle.e,
+.fridge-hierarchy-resize-handle.ne,
+.fridge-hierarchy-resize-handle.se { right: -5px; }
+.fridge-hierarchy-resize-handle.w,
+.fridge-hierarchy-resize-handle.nw,
+.fridge-hierarchy-resize-handle.sw { left: -5px; }
+.fridge-hierarchy-resize-handle.nw,
+.fridge-hierarchy-resize-handle.se { cursor: nwse-resize; }
+.fridge-hierarchy-resize-handle.ne,
+.fridge-hierarchy-resize-handle.sw { cursor: nesw-resize; }
+
+/* LinkVis-style movable toolbar */
+.fridge-toolbar {
+  position: absolute; z-index: 16000; display: flex; align-items: center;
+  box-sizing: border-box; color: #334155;
+  border: 1px solid rgba(15,23,42,.06); background: rgba(255,255,255,.96);
+  box-shadow: 0 4px 15px rgba(15,23,42,.15);
+}
+.fridge-toolbar.docked-left {
+  top: 8px; bottom: 8px; left: 8px; width: 48px; padding: 10px 4px;
+  flex-direction: column; justify-content: flex-start; gap: 7px; border-radius: 12px;
+}
+.fridge-toolbar.docked-top {
+  top: 8px; right: 8px; left: 8px; height: 48px; padding: 4px 14px;
+  flex-direction: row; justify-content: flex-start; gap: 7px; border-radius: 12px;
+}
+.fridge-toolbar.floating-horizontal {
+  width: max-content; height: 48px; padding: 0 14px; flex-direction: row; gap: 7px;
+  border-radius: 25px;
+}
+.fridge-toolbar.floating-vertical {
+  width: 48px; height: max-content; padding: 13px 4px; flex-direction: column; gap: 7px;
+  border-radius: 24px;
+}
+.fridge-toolbar.minimized {
+  top: 8px; left: 8px; width: 44px; height: 44px; padding: 0;
+  justify-content: center; overflow: hidden; border-radius: 50%; cursor: pointer;
+}
+.fridge-toolbar.minimized > *:not(.fridge-toolbar-handle-wrap) { display: none; }
+.fridge-toolbar.minimized .fridge-toolbar-handle { pointer-events: none; }
+.fridge-toolbar-handle-wrap { position: relative; flex: none; }
+.fridge-toolbar-handle {
+  width: 34px; height: 34px; padding: 4px; display: flex; align-items: center;
+  justify-content: center; border-radius: 6px; color: #64748b; cursor: grab;
+}
+.fridge-toolbar-handle:hover { background: rgba(15,23,42,.05); }
+.fridge-toolbar-handle:active { cursor: grabbing; }
+.fridge-toolbar-handle .gig-icon-svg { width: 18px; height: 26px; }
+.fridge-toolbar-menu,
+.fridge-selection-menu {
+  position: absolute; z-index: 18000; display: none; flex-direction: column;
+  min-width: 158px; padding: 5px 0; overflow: hidden;
+  border: 1px solid rgba(15,23,42,.1); border-radius: 8px; background: #fff;
+  box-shadow: 0 8px 20px rgba(15,23,42,.2);
+}
+.fridge-toolbar-menu.show,
+.fridge-selection-menu.show { display: flex; }
+.fridge-toolbar-menu button,
+.fridge-selection-menu button {
+  width: 100%; padding: 9px 13px; border: 0; border-bottom: 1px solid #f1f5f9;
+  background: transparent; color: #334155; text-align: left; font: 500 12px inherit; cursor: pointer;
+}
+.fridge-toolbar-menu button:hover,
+.fridge-selection-menu button:hover { background: #f4f6f8; }
+.fridge-toolbar-menu button.primary { color: #0072b2; font-weight: 700; }
+.fridge-selection-menu button.active-mode { background: #e6f3fa; color: #0072b2; font-weight: 700; }
+.fridge-tool-dropdown { position: relative; display: flex; align-items: center; justify-content: center; }
+.fridge-tool-btn {
+  position: relative; flex: 0 0 34px; width: 34px; height: 34px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 7px; background: transparent; color: #334155; cursor: pointer;
+}
+.fridge-tool-btn:hover { background: rgba(15,23,42,.06); }
+.fridge-tool-btn.active { background: rgba(0,114,178,.14); color: #0072b2; }
+.fridge-tool-btn .gig-icon-svg { width: 21px; height: 21px; }
+.fridge-tool-btn[data-action="selection-menu"] .gig-icon-svg { width: 27px; height: 27px; }
+.fridge-plot-toggles { display: flex; flex-direction: inherit; gap: 7px; align-items: center; }
+.fridge-plot-badge {
+  position: absolute; right: 0; bottom: 0; min-width: 14px; height: 14px; padding: 0 3px;
+  display: grid; place-items: center; border-radius: 7px; background: #334155;
+  color: #fff; font: 800 8px/1 inherit;
+}
+.fridge-separator { flex: none; border-radius: 2px; background: #cbd5e1; }
+.fridge-toolbar.docked-left .fridge-separator,
+.fridge-toolbar.floating-vertical .fridge-separator { width: 20px; height: 2px; margin: 5px auto; }
+.fridge-toolbar.docked-top .fridge-separator,
+.fridge-toolbar.floating-horizontal .fridge-separator { width: 2px; height: 20px; margin: auto 5px; }
+.fridge-toolbar.docked-left .fridge-toolbar-menu,
+.fridge-toolbar.docked-left .fridge-selection-menu,
+.fridge-toolbar.floating-vertical .fridge-toolbar-menu,
+.fridge-toolbar.floating-vertical .fridge-selection-menu { top: 0; left: calc(100% + 6px); }
+.fridge-toolbar.docked-top .fridge-toolbar-menu,
+.fridge-toolbar.docked-top .fridge-selection-menu,
+.fridge-toolbar.floating-horizontal .fridge-toolbar-menu,
+.fridge-toolbar.floating-horizontal .fridge-selection-menu { top: calc(100% + 6px); left: 0; }
+
+/* Original/scaled data switch appears only when a dual-data ggelato plot is supplied. */
+.fridge-data-switch {
+  --fridge-switch-width: 104px;
+  --fridge-switch-height: 36px;
+  position: relative; display: inline-block; flex: none;
+  width: var(--fridge-switch-width); height: var(--fridge-switch-height);
+}
+.fridge-data-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.fridge-slider {
+  position: absolute; inset: 0; overflow: hidden; border: 2px solid #334155;
+  border-radius: 18px; background: #334155; cursor: pointer; transition: .2s;
+}
+.fridge-knob {
+  position: absolute; z-index: 2; left: 2px; bottom: 2px;
+  width: calc(var(--fridge-switch-height) - 10px);
+  height: calc(var(--fridge-switch-height) - 10px);
+  border-radius: 50%; background: #fff; transition: transform .2s;
+}
+.fridge-label {
+  position: absolute; top: 50%; transform: translateY(-50%); color: #fff;
+  font-size: calc(var(--fridge-switch-height) * .26); font-weight: 800;
+  line-height: 1; letter-spacing: .1px;
+  text-transform: uppercase; pointer-events: none; transition: opacity .2s;
+}
+.fridge-label-original { right: 8px; opacity: 1; }
+.fridge-label-scaled { left: 9px; opacity: 0; }
+.fridge-data-switch input:checked + .fridge-slider { border-color: #0072b2; background: #0072b2; }
+.fridge-data-switch input:checked + .fridge-slider .fridge-knob {
+  transform: translateX(calc(var(--fridge-switch-width) - var(--fridge-switch-height)));
+}
+.fridge-data-switch input:checked + .fridge-slider .fridge-label-original { opacity: 0; }
+.fridge-data-switch input:checked + .fridge-slider .fridge-label-scaled { opacity: 1; }
+.fridge-toolbar.docked-left .fridge-data-switch,
+.fridge-toolbar.floating-vertical .fridge-data-switch { transform: rotate(90deg); margin: 34px 0; }
+
+.fridge-panel-error, .fridge-error {
+  box-sizing: border-box; margin: 12px; padding: 12px 14px; border: 1px solid #fecaca;
+  border-radius: 8px; background: #fff1f2; color: #991b1b; font: 12px/1.45 system-ui, sans-serif;
+}
+.fridge-error { margin: 0; width: 100%; }
+
+@media (max-width: 720px) {
+  .fridge-window { min-width: 150px; }
+  .fridge-hierarchy-panel { max-width: 48%; }
+  .fridge-snap-menu { width: 205px; grid-template-columns: repeat(2, 1fr); }
+}

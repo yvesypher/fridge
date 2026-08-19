@@ -1,0 +1,1 @@
+import './widgets/fridge.js'

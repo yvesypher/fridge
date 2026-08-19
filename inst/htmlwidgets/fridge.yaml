@@ -1,0 +1,4 @@
+# Plot libraries and plot styles are inherited from the supplied ggelato
+# widgets in R/fridge.R. The fridge-only stylesheet is attached there with a
+# cache-busting version derived from the installed file timestamp.
+dependencies: []
