@@ -1,19 +1,28 @@
 Package: fridge
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Framework for Rendering Interactive Data-driven Graphic Elements
+Description: Platform for coordinating interactive graphics.
 Version: 0.1.0
 Authors@R: c(
-    person(
-      "Jane", "Doe",
-      email = "jane@example.com",
-      role = c("aut", "cre")
-    )
+    person("Minh", "Nguyen", email = "minh.nguyen11@monash.edu", role = c("aut", "cre"), comment = c(ORCID = "0009-0003-4630-8414")),
+    person("Di", "Cook", email = "dicook@monash.edu", role = c("aut", "ctb"), comment = c(ORCID = "0000-0002-3813-7155")),
+    person("Tim", "Dwyer", email = "tim.dwyer@monash.edu", role = c("aut", "ctb"), comment = c(ORCID = "0000-0002-9076-9571"))
   )
-Description: More about what it does (maybe more than one line).
-    Continuation lines should be indented.
-License: What license is it under?
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports: 
-    ggelato,
-    htmlwidgets
+    htmlwidgets,
+    rlang,
+    grDevices,
+    stats,
+    htmltools,
+    dplyr,
+    fabletools
+Depends: R (>= 2.10)
+Roxygen: list(markdown = TRUE)    
+Config/roxygen2/version: 8.1.0
+VignetteBuilder: quarto
+Suggests: 
+    knitr,
+    quarto

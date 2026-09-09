@@ -1,22 +1,10 @@
-// ---------------------------------------------------------------------------
-// Shared hierarchy machinery for ggelato widgets (gig_stldp, gig_sunburst)
-// safeConvert(), hierarchy syntax parsing, data-state rebuilding, and the
-// drag-to-reorder hierarchy legend with a per-variable hover dropdown:
-//   - checkbox per level value  -> highlight (select) that series in the plots
-//   - eye button per level value -> hide/unhide that series (and its subtree)
-// ---------------------------------------------------------------------------
-
 export const DEPTH_COLORS = ['#e76f51', '#f4a261', '#e9c46a', '#2a9d8f', '#5495CFFF'];
 export const getDepthColor = (depth) => DEPTH_COLORS[depth % DEPTH_COLORS.length];
 
-const SEP = '\u0001'; // internal separator for "key|value" hidden entries
+const SEP = '\u0001';
 
-// Pseudo-key for the root ("Total") series so the Total chip can reuse the
-// same highlight / hide machinery as the real hierarchy variables.
 export const TOTAL_KEY = '__gig_total__';
 
-// htmlwidgets serialises data.frames as an object of column arrays;
-// convert to an array of row objects.
 export function safeConvert(data) {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -69,8 +57,6 @@ export function createHierState(rows, hierarchyStr, excludeKeys) {
   let allKeys, activeKeys, constraints;
   if (hierarchyStr) {
     const p = parseHierarchy(hierarchyStr);
-    // The hierarchy expression is authoritative. Looking only at the first
-    // row is unsafe because an aggregate row can contain nulls in every key.
     allKeys = p.keys.filter(k => availableKeys.has(k));
     activeKeys = [...allKeys];
     constraints = p.constraints.filter(r => allKeys.includes(r.parent) && allKeys.includes(r.child));
@@ -98,7 +84,7 @@ export function createHierState(rows, hierarchyStr, excludeKeys) {
     activeKeys,
     constraints,
     disabled: new Set(),
-    hiddenValues: new Set(),   // entries "key<SEP>value" hidden from the plots
+    hiddenValues: new Set(),
     canonicalId,
     series: [],
 
@@ -132,8 +118,6 @@ export function createHierState(rows, hierarchyStr, excludeKeys) {
         if (id.split(SEP)[0] === key) this.hiddenValues.delete(id);
       });
     },
-    // A series is hidden if any of its (non-aggregated) key values is hidden.
-    // Hiding "NSW" under State therefore also hides all NSW regions.
     isSeriesHidden(d) {
       if (d._depth === 0 && this.isHidden(TOTAL_KEY, 'Total')) return true;
       for (const k of this.activeKeys) {
@@ -141,7 +125,6 @@ export function createHierState(rows, hierarchyStr, excludeKeys) {
       }
       return false;
     },
-    // All observed (non-aggregated) values of a hierarchy variable.
     valuesForKey(key) {
       if (key === TOTAL_KEY) return ['Total'];
       const set = new Set();
@@ -201,22 +184,6 @@ export function createHierState(rows, hierarchyStr, excludeKeys) {
   return state;
 }
 
-// ---------------------------------------------------------------------------
-// Hierarchy legend widget.
-//
-// renderLegend(container, state, onChange, hooks)
-//   onChange : fired after reorder / level enable-disable (structure changed)
-//   hooks    : optional, provided by the plot widget
-//     isChecked(key, value)          -> is that level's series highlighted?
-//     onCheck(key, value, checked)   -> (un)highlight that series
-//     onVisibilityChange()           -> redraw after hide/unhide (keep selection)
-//
-// Hovering a chip opens a dropdown listing every observation of that
-// variable. Each row has a checkbox (highlight in the plots) and an eye
-// button (hide/unhide from the plots). A count badge on the chip shows how
-// many values are currently hidden; "Show all" in the dropdown unhides them.
-// ---------------------------------------------------------------------------
-
 const ICON_EYE = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const ICON_EYE_OFF = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 
@@ -226,10 +193,9 @@ export function renderLegend(container, state, onChange, hooks) {
   container.innerHTML = '';
   container.classList.add('gig-hier-legend');
 
-  const BASE_INDENT = 22;   // room for the connector track on the left
+  const BASE_INDENT = 22;
   let hideTimer = null;
 
-  // ---- dropdown (one per legend, repositioned per chip) -----------------
   const dd = document.createElement('div');
   dd.className = 'gig-hier-dropdown';
   dd.addEventListener('mouseenter', () => clearTimeout(hideTimer));
@@ -258,22 +224,17 @@ export function renderLegend(container, state, onChange, hooks) {
     });
   }
 
-  // Excel-filter style dropdown: search box on top, "(Select All)" as the
-  // first row (tri-state), then one row per observation with its eye button.
   function populateDropdown(key) {
     const isTotal = key === TOTAL_KEY;
     const allValues = state.valuesForKey(key);
     const canCheck = typeof hooks.isChecked === 'function' && typeof hooks.onCheck === 'function';
     const levelDisabled = !isTotal && state.disabled.has(key);
-    // Checkboxes take the chip colour of this hierarchy level, so a ticked
-    // box is visually tied to the lines it highlights in the plots.
     const accent = isTotal ? getDepthColor(0)
       : getDepthColor(state.activeKeys.indexOf(key) + 1);
     let filter = '';
 
     dd.innerHTML = '';
 
-    // Header: variable name (+ "Show all" when values are hidden)
     const head = document.createElement('div');
     head.className = 'gig-dd-head';
     head.innerHTML = '<span class="gig-dd-title">' + (isTotal ? 'Total' : key) + '</span>';
@@ -293,7 +254,6 @@ export function renderLegend(container, state, onChange, hooks) {
     }
     dd.appendChild(head);
 
-    // Search box (pointless for single-value lists such as Total)
     let search = null;
     if (allValues.length > 1) {
       search = document.createElement('input');
@@ -310,7 +270,6 @@ export function renderLegend(container, state, onChange, hooks) {
       dd.appendChild(note);
     }
 
-    // "(Select All)" row - tri-state, applies to the filtered values
     let cbAll = null;
     if (canCheck && !levelDisabled && allValues.length > 1) {
       const rowAll = document.createElement('div');
@@ -332,8 +291,7 @@ export function renderLegend(container, state, onChange, hooks) {
 
     const filteredValues = () =>
       allValues.filter(v => !filter || v.toLowerCase().includes(filter));
-    // Values that can actually be (un)checked right now
-    const checkableValues = () =>
+    /const checkableValues = () =>
       filteredValues().filter(v => !state.isHidden(key, v));
 
     function syncSelectAll() {
@@ -353,7 +311,6 @@ export function renderLegend(container, state, onChange, hooks) {
         const hidden = state.isHidden(key, v);
         if (hidden) row.classList.add('is-hidden');
 
-        // Checkbox: highlight (select) this series in the plots
         const label = document.createElement('label');
         label.className = 'gig-dd-label';
         const cb = document.createElement('input');
@@ -369,7 +326,6 @@ export function renderLegend(container, state, onChange, hooks) {
         label.appendChild(document.createTextNode(v));
         row.appendChild(label);
 
-        // Eye: hide / unhide this series (and its whole subtree)
         const eye = document.createElement('button');
         eye.className = 'gig-dd-eye';
         eye.title = hidden ? 'Show in plot' : 'Hide from plot';
@@ -381,7 +337,6 @@ export function renderLegend(container, state, onChange, hooks) {
           renderList();
           syncSelectAll();
           refreshChipBadges();
-          // Keep the "Show all" button in the header in sync
           const hasShow = head.querySelector('.gig-dd-showall');
           const needShow = state.hiddenCountFor(key) > 0;
           if (needShow && !hasShow) populateDropdown(key);
@@ -398,7 +353,7 @@ export function renderLegend(container, state, onChange, hooks) {
       cbAll.addEventListener('change', () => {
         const vs = checkableValues();
         const checked = cbAll.checked;
-        // ONE batched selection change + ONE redraw (no per-value redraws)
+
         if (hooks.onCheckMany) hooks.onCheckMany(key, vs, checked);
         else vs.forEach(v => hooks.onCheck(key, v, checked));
         renderList();
@@ -421,8 +376,8 @@ export function renderLegend(container, state, onChange, hooks) {
     dd.style.top = chipEl.offsetTop + 'px';
     dd.style.left = (chipEl.offsetLeft + chipEl.offsetWidth + 10) + 'px';
     dd.classList.add('visible');
-    // If the right-opening dropdown is clipped by the viewport (panel
-    // docked at the right edge), flip it to the chip's left instead.
+
+
     requestAnimationFrame(() => {
       const r = dd.getBoundingClientRect();
       if (r.right > window.innerWidth - 8) {
@@ -431,9 +386,9 @@ export function renderLegend(container, state, onChange, hooks) {
     });
   }
 
-  // ---- Total chip (root series) -----------------------------------------
-  // Click toggles the Total highlight; hover opens a dropdown with the
-  // same checkbox + eye (hide) controls as the other levels.
+
+
+
   const totalChip = document.createElement('div');
   totalChip.className = 'gig-hier-chip gig-total-chip';
   totalChip.dataset.key = TOTAL_KEY;
@@ -451,7 +406,7 @@ export function renderLegend(container, state, onChange, hooks) {
   });
   container.appendChild(totalChip);
 
-  // ---- chips ------------------------------------------------------------
+
   state.activeKeys.forEach((key, index) => {
     const el = document.createElement('div');
     el.className = 'gig-hier-chip';
@@ -520,7 +475,7 @@ export function renderLegend(container, state, onChange, hooks) {
       }
     });
 
-    // Click toggles a level on/off (collapses that level of the hierarchy)
+
     el.addEventListener('click', () => {
       if (wasDragged) return;
       if (state.disabled.has(key)) state.disabled.delete(key);
@@ -533,7 +488,7 @@ export function renderLegend(container, state, onChange, hooks) {
     container.appendChild(el);
   });
 
-  // ---- connector lines for "/" nesting constraints ----------------------
+
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS, 'svg');
   svg.style.position = 'absolute';
@@ -586,37 +541,20 @@ export function renderLegend(container, state, onChange, hooks) {
   refreshChipBadges();
 }
 
-// ---------------------------------------------------------------------------
-// Floating hierarchy panel (ported from the plotly add_hierarchy adapter):
-//  - clean card, draggable by grabbing anywhere on its background
-//  - resizable via 8 edge/corner handles; the chip content SCALES with the
-//    panel (transform), so a bigger panel shows bigger chips
-//  - edge docking: drop the panel near an edge of the plot and it snaps
-//    outside the plotting area; the host is told (via opts.onLayout) to
-//    reserve that band so the plots resize around it. Dragging it away
-//    releases the band again.
-//
-// initHierPanel(panelEl, hostEl, {
-//   onLayout(side|null, band)  -> reserve/release space in the plot layout
-//   insets: {left,right,top,bottom} -> host chrome (e.g. a toolbar) the
-//                                      panel should not cover when docked
-//   initialDock: 'right'|null
-// }) -> { refreshNatural(), setDock(side) }
-// ---------------------------------------------------------------------------
 export function initHierPanel(panelEl, hostEl, opts) {
   if (!panelEl || !hostEl) return null;
   opts = opts || {};
   const onLayout = opts.onLayout || (() => {});
-  // Used live (not copied): the host may mutate it (e.g. toolbar docking)
+
   const insets = opts.insets || { left: 8, right: 8, top: 8, bottom: 8 };
   const inner = panelEl.querySelector('.gig-hier-panel-inner');
   const PAD = 8, DOCK_TH = 30, MIN_W = 90, MIN_H = 60;
-  const CONTENT_PAD = 14;   // panel padding around the scaled content
+  const CONTENT_PAD = 14;
 
   let docked = null;
   let naturalW = 160, naturalH = 100;
 
-  // ---- content scaling -------------------------------------------------
+
   function measureNatural() {
     if (!inner) return;
     inner.style.transform = 'none';
@@ -632,15 +570,15 @@ export function initHierPanel(panelEl, hostEl, opts) {
     const ph = panelEl.clientHeight - CONTENT_PAD;
     let sc = Math.min(pw / naturalW, ph / naturalH);
     sc = Math.max(0.5, Math.min(sc, 3));
-    // Centre the scaled content inside the panel: when the panel is
-    // stretched wider/taller than the chips need, the leftover space is
-    // split evenly instead of the chips hugging the top-left corner.
+
+
+
     const tx = Math.max(0, (pw - naturalW * sc) / 2);
     const ty = Math.max(0, (ph - naturalH * sc) / 2);
     inner.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + sc + ')';
   }
 
-  // ---- docking ---------------------------------------------------------
+
   function band(side) {
     return (side === 'left' || side === 'right')
       ? panelEl.offsetWidth + PAD * 2
@@ -683,7 +621,7 @@ export function initHierPanel(panelEl, hostEl, opts) {
     return 'bottom';
   }
 
-  // ---- drag anywhere on the panel background ---------------------------
+
   let dragging = false, moved = false, sx, sy, sl, st;
   panelEl.addEventListener('mousedown', e => {
     if (e.target.closest('.gig-hier-chip, .gig-hier-dropdown, .gig-resize-handle, input, button, a, label')) return;
@@ -697,7 +635,7 @@ export function initHierPanel(panelEl, hostEl, opts) {
     const dx = e.clientX - sx, dy = e.clientY - sy;
     if (!moved && Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
     if (!moved && docked) {
-      // Undock as soon as a real drag starts so the plots expand back.
+
       docked = null;
       panelEl.classList.remove('docked');
       onLayout(null, 0);
@@ -713,7 +651,7 @@ export function initHierPanel(panelEl, hostEl, opts) {
     if (moved) setDock(detectDock());
   });
 
-  // ---- resize handles (content rescales live) --------------------------
+
   panelEl.querySelectorAll('.gig-resize-handle').forEach(h => {
     h.addEventListener('mousedown', e => {
       e.stopPropagation();
@@ -746,13 +684,13 @@ export function initHierPanel(panelEl, hostEl, opts) {
     });
   });
 
-  // Keep the dock flush when the widget itself is resized.
+
   if (typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(() => { if (docked) { snapToDock(); onLayout(docked, band(docked)); } })
       .observe(hostEl);
   }
 
-  // ---- initial sizing + dock ------------------------------------------
+
   requestAnimationFrame(() => {
     measureNatural();
     panelEl.style.width = (naturalW + CONTENT_PAD) + 'px';
@@ -766,6 +704,3 @@ export function initHierPanel(panelEl, hostEl, opts) {
     setDock
   };
 }
-
-// Styling ships as a real stylesheet: inst/htmlwidgets/lib/ggelato/styles.css,
-// declared as a dependency in each widget's inst/htmlwidgets/<name>.yaml.

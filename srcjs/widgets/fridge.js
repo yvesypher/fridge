@@ -1,8 +1,4 @@
-/*
- * The hierarchy model, hierarchy widget, and sunburst renderer are provided
- * by the installed ggelato package through window.ggelatoAPI. Keeping them
- * out of this bundle prevents fridge from freezing older ggelato behavior.
- */
+
 function requireGgelatoAPI() {
   const api = window.ggelatoAPI;
   if (!api) {
@@ -13,31 +9,47 @@ function requireGgelatoAPI() {
   return api;
 }
 
+function requireRenderer(name) {
+  const api = requireGgelatoAPI();
+  const fn = api[name];
+  if (typeof fn !== 'function') {
+    throw new Error(
+      'The installed ggelato does not provide ' + name + '() ' +
+      '(api build: ' + (api.build || 'unknown') + '). Available keys: ' +
+      Object.keys(api).join(', ') + '. Rebuild and reinstall ggelato, ' +
+      'then rebuild fridge.'
+    );
+  }
+  return fn;
+}
+
 const safeConvert = data => requireGgelatoAPI().dataFrameToRows(data);
 const createHierState = (rows, structure, excludeKeys) =>
   requireGgelatoAPI().createHierState(rows, structure, excludeKeys);
 const renderSunburst = (content, x, shared) =>
-  requireGgelatoAPI().renderSunburst(content, x, shared);
+  requireRenderer('renderSunburst')(content, x, shared);
+const renderStldp = (content, x, shared) =>
+  requireRenderer('renderStldp')(content, x, shared);
+const renderPoint = (content, x, shared) =>
+  requireRenderer('renderPoint')(content, x, shared);
 const parseHierarchy = structure => {
   const parsed = requireGgelatoAPI().parseStructure(structure);
   return { keys: parsed.activeKeys, constraints: parsed.constraints };
 };
 const TOTAL_KEY = '__total__';
 
-/* =====================================================================
-   fridge: composes gig_stldp / gig_point / gig_sunburst payloads into a
-   linkvis-style dashboard - floating snappable windows, one shared
-   toolbar, one shared hierarchy panel, linked selection everywhere.
-   ===================================================================== */
-
-// ---------------- icons ----------------
 const SVGS = {
   single: '<svg class="gig-icon-svg" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.5" fill="#333"/><circle cx="16" cy="8" r="3.5" fill="#ccc"/><circle cx="8" cy="16" r="3.5" fill="#ccc"/><circle cx="16" cy="16" r="3.5" fill="#ccc"/></svg>',
   multiple: '<svg class="gig-icon-svg" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.5" fill="#333"/><circle cx="16" cy="8" r="3.5" fill="#333"/><circle cx="8" cy="16" r="3.5" fill="#333"/><circle cx="16" cy="16" r="3.5" fill="#333"/></svg>',
   inverse: '<svg class="gig-icon-svg" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.5" fill="#ccc"/><circle cx="16" cy="8" r="3.5" fill="#333"/><circle cx="8" cy="16" r="3.5" fill="#333"/><circle cx="16" cy="16" r="3.5" fill="#333"/></svg>',
   inverseAll: '<svg class="gig-icon-svg" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#333" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#ccc"/><circle cx="16" cy="8" r="2.5" fill="#333"/><circle cx="8" cy="16" r="2.5" fill="#333"/><circle cx="16" cy="16" r="2.5" fill="#333"/></svg>',
-  hierarchy: '<svg class="gig-icon-svg" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M192 64c0-17.7 14.3-32 32-32h64c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32h-8v64h120c39.8 0 72 32.2 72 72v56h8c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32h-64c-17.7 0-32-14.3-32-32v-64c0-17.7 14.3-32 32-32h8v-56c0-13.3-10.7-24-24-24H280v80h8c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32h-64c-17.7 0-32-14.3-32-32v-64c0-17.7 14.3-32 32-32h8v-80H112c-13.3 0-24 10.7-24 24v56h8c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32v-64c0-17.7 14.3-32 32-32h8v-56c0-39.8 32.2-72 72-72h120v-64h-8c-17.7 0-32-14.3-32-32V64z"/></svg>'
+  hierarchy: '<svg class="gig-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="8" r="2.5" fill="#333" stroke="none"/><circle cx="8" cy="16" r="2.5" fill="#333" stroke="none"/><circle cx="16" cy="16" r="2.5" fill="#333" stroke="none"/><circle cx="8" cy="8" r="2.5" fill="#ccc" stroke="none"/><path d="M16 8 L8 16 M16 8 L16 16" stroke="#333" stroke-width="1.5"/></svg>'
 };
+
+
+
+const ICON_HIERARCHY_PANEL = '<svg class="gig-icon-svg" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M192 64c0-17.7 14.3-32 32-32h64c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32h-8v64h120c39.8 0 72 32.2 72 72v56h8c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32h-64c-17.7 0-32-14.3-32-32v-64c0-17.7 14.3-32 32-32h8v-56c0-13.3-10.7-24-24-24H280v80h8c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32h-64c-17.7 0-32-14.3-32-32v-64c0-17.7 14.3-32 32-32h8v-80H112c-13.3 0-24 10.7-24 24v56h8c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32v-64c0-17.7 14.3-32 32-32h8v-56c0-39.8 32.2-72 72-72h120v-64h-8c-17.7 0-32-14.3-32-32V64z"/></svg>';
+
 const ICON_BOX = '<svg class="gig-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9 V6 a2 2 0 0 1 2-2 h3"/><path d="M15 4 h3 a2 2 0 0 1 2 2 v3"/><path d="M20 15 v3 a2 2 0 0 1 -2 2 h-3"/><path d="M9 20 H6 a2 2 0 0 1 -2-2 v-3"/></svg>';
 const ICON_RESET = '<svg class="gig-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
 const ICON_LASSO = '<svg class="gig-icon-svg" viewBox="2 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M 7 21 L 9.5 16.5" /><path d="M 9.5 16.5 C 4 11 7 5 15 5 C 21 5 23 11 20 15 C 18 17 13 18 9.5 16.5" /><path d="M 9.5 16.5 C 9 17 8 17 8 16" /></svg>';
@@ -45,6 +57,7 @@ const ICON_LABELS = '<svg class="gig-icon-svg" viewBox="0 0 24 24" fill="none" s
 const ICON_GRIP = '<svg viewBox="0 0 14 20" fill="currentColor" width="14" height="20" style="pointer-events:none;"><circle cx="4" cy="4" r="1.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="4" cy="16" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>';
 const ICON_MIN = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="4" y1="12" x2="20" y2="12"></line></svg>';
 const ICON_SNAP = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>';
+
 const WIN_ICONS = {
   gig_point: '<svg class="gig-icon-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3v18h18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="14" r="1.5"/><circle cx="11" cy="10" r="1.5"/><circle cx="15" cy="16" r="1.5"/><circle cx="19" cy="8" r="1.5"/><circle cx="8" cy="7" r="1.5"/><circle cx="13" cy="13" r="1.5"/><circle cx="17" cy="5" r="1.5"/></svg>',
   gig_stldp: '<svg class="gig-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 3 3 21 21 21"></polyline><polyline points="3 16 9 10 14 15 21 6"></polyline></svg>',
@@ -55,58 +68,36 @@ const WIN_TITLES = {
   gig_stldp: 'STL Decomposition',
   gig_sunburst: 'Hierarchy'
 };
-const FRIDGE_BUILD = 'fridge-scrollytelling-embed-v11-20260729';
 
-// Critical layout overrides are installed by the binding as well as shipped
-// in styles.css. This prevents an older cached stylesheet from hiding a newly
-// bundled interface revision in RStudio Viewer or a browser tab.
-function installRuntimeStyles() {
-  const id = 'fridge-linkvis-runtime-v11';
-  if (document.getElementById(id)) return;
-  const style = document.createElement('style');
-  style.id = id;
-  style.textContent =
-    'html.fridge-fullscreen-page,body.fridge-fullscreen-page{' +
-      'width:100%!important;height:100%!important;margin:0!important;' +
-      'padding:0!important;overflow:hidden!important}' +
-    '.fridge-fullscreen-host{position:fixed!important;inset:0!important;' +
-      'z-index:2147483000;width:100vw!important;height:100vh!important;' +
-      'min-width:100vw!important;min-height:100vh!important;max-width:none!important;' +
-      'max-height:none!important;margin:0!important;padding:0!important}' +
-    '.fridge-fullscreen-host>.fridge-widget{width:100vw!important;' +
-      'height:100vh!important;min-height:100vh!important}' +
-    '.fridge-embedded-host{position:relative!important;inset:auto!important;' +
-      'z-index:auto!important;width:100%!important;min-width:0!important;' +
-      'max-width:100%!important;margin:0!important;padding:0!important;' +
-      'overflow:hidden!important;isolation:isolate}' +
-    '.fridge-embedded-host>.fridge-widget{width:100%!important;' +
-      'height:100%!important;min-height:0!important}' +
-    '.fridge-window,.fridge-window-content{contain:layout style}' +
-    '.fridge-window-content.gig-point-main{display:flex;align-items:center;' +
-      'justify-content:center}' +
-    '.fridge-window-content .gig-scatter-grid{flex:none;min-width:0;' +
-      'min-height:0;transition:none!important;contain:layout size style}' +
-    '.fridge-window-content .gig-chart-wrap{flex:none;min-width:0;' +
-      'min-height:0;overflow:hidden;contain:strict}' +
-    '.fridge-window-content .gig-chart-wrap canvas{display:block;' +
-      'max-width:none;max-height:none;transition:none!important}' +
-    '.fridge-hierarchy-panel{width:158px;height:176px;padding:10px;cursor:grab}' +
-    '.fridge-hierarchy-panel-inner{position:absolute!important;left:50%!important;' +
-      'top:50%!important;max-height:none!important;overflow:visible!important;' +
-      'transform-origin:center center!important;will-change:transform}' +
-    '.fridge-data-switch{--fridge-switch-width:104px;--fridge-switch-height:36px;' +
-      'width:var(--fridge-switch-width)!important;height:var(--fridge-switch-height)!important}' +
-    '.fridge-label{font-size:calc(var(--fridge-switch-height)*.26)!important;' +
-      'font-weight:800!important;letter-spacing:.1px!important}' +
-    '.fridge-label-original{right:8px!important}.fridge-label-scaled{left:9px!important}' +
-    '.fridge-data-switch input:checked+.fridge-slider .fridge-knob{' +
-      'transform:translateX(calc(var(--fridge-switch-width) - var(--fridge-switch-height)))!important}' +
-    '.fridge-toolbar.docked-left .fridge-data-switch,' +
-      '.fridge-toolbar.floating-vertical .fridge-data-switch{margin:34px 0!important}';
-  (document.head || document.documentElement).appendChild(style);
-}
 
-// Point-in-polygon / point-in-box, shared by all brushing code
+
+const SELECTION_LABELS = {
+  single: 'Single Selection',
+  multiple: 'Multiple Selection',
+  inverse: 'Within Current Level',
+  inverseAll: 'Across All Levels',
+  hierarchy: 'Hierarchical Selection'
+};
+const SELECTION_TITLES = {
+  single: 'Single',
+  multiple: 'Multiple',
+  inverse: 'Inverse - Peers Only',
+  inverseAll: 'Inverse - Entire Hierarchy',
+  hierarchy: 'Hierarchical'
+};
+
+const FRIDGE_BUILD = 'fridge-scrollytelling-embed-v13-shared-renderers-20260827';
+
+
+
+
+
+
+
+
+
+
+
 const inBox = (x, y, b) => x >= b.xMin && x <= b.xMax && y >= b.yMin && y <= b.yMax;
 const inLasso = (p, vs) => {
   let ins = false;
@@ -119,695 +110,13 @@ const inLasso = (p, vs) => {
 const fmt = v => typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(4)) : v;
 
 /* =====================================================================
-   RENDERERS - each returns { update(full), resize() } and paints inside
-   a window's content element, driven entirely by the shared object.
-   ===================================================================== */
-
-// ---------------- gig_stldp renderer ----------------
-function renderStldp(content, x, shared) {
-  const rows = safeConvert(x.data || x.unscaled || x.stl_unscaled || x.stl_u);
-  const scaledRows = safeConvert(x.scaled || x.stl_scaled || x.stl_s);
-  const hasScaled = scaledRows.length > 0;
-  if (hasScaled) shared.hasScaled = true;
-
-  const sample = rows[0] || {};
-  const keys = Object.keys(sample);
-  const timeVar = ['Quarter', 'Time', 'Month', 'Week', 'Date'].find(k => keys.includes(k)) || 'Time';
-  const seasonVar = x.season || keys.find(k => k.startsWith('season') && k !== 'season_adjust') || 'season_year';
-  const targetVar = x.target || keys.find(k =>
-    typeof sample[k] === 'number' &&
-    !['trend', 'remainder', 'season_adjust'].includes(k) && !k.startsWith('season')) || 'value';
-
-  const dictU = {}, dictS = {};
-  const fill = (rs, out) => {
-    rs.forEach(r => {
-      const id = shared.state.canonicalId(r);
-      (out[id] = out[id] || []).push(r);
-    });
-    const sorter = (a, b) => String(a[timeVar] || '').localeCompare(String(b[timeVar] || ''));
-    Object.values(out).forEach(a => a.sort(sorter));
-  };
-  fill(rows, dictU);
-  if (hasScaled) fill(scaledRows, dictS);
-  const dict = () => (shared.isScaled.v && hasScaled) ? dictS : dictU;
-
-  content.innerHTML =
-    '<div class="gig-stl-controls">' +
-    ['Data', 'Trend', 'Season', 'Remainder'].map(c =>
-      '<button class="gig-stl-chip active" data-comp="' + c + '">' +
-      (c === 'Season' ? 'Seasonality' : c) + '</button>').join('') +
-    '</div>' +
-    ['Data', 'Trend', 'Season', 'Remainder'].map(c =>
-      '<div class="gig-stl-wrapper" data-wrap="' + c + '"><canvas></canvas></div>').join('');
-
-  const ORDER = ['Data', 'Trend', 'Season', 'Remainder'];
-  const MAP = { Data: 'data', Trend: 'trend', Season: 'season', Remainder: 'remainder' };
-  const charts = {};
-  let lastWidth = -1;
-  let lastHeight = -1;
-
-  function tooltipHandler(ctx) {
-    const { chart, tooltip } = ctx;
-    const tt = shared.tooltipEl;
-    if (tooltip.opacity === 0) { tt.style.opacity = 0; return; }
-    if (tooltip.dataPoints && tooltip.dataPoints.length) {
-      const dp = tooltip.dataPoints[0];
-      const i = chart.data.datasets[dp.datasetIndex]._trueIndex;
-      const d = shared.state.series[i];
-      if (d) {
-        const name = chart.options.plugins.title.text;
-        tt.innerHTML = '<div style="font-weight:bold;margin-bottom:4px;">' +
-          '<span class="gig-tooltip-swatch" style="background:' +
-          chart.data.datasets[dp.datasetIndex].borderColor + '"></span>' +
-          shared.state.label(d) + '</div>' +
-          '<div>' + timeVar + ': ' + dp.label + '</div>' +
-          '<div>' + name + ': ' + fmt(dp.parsed.y) + '</div>';
-      }
-    }
-    const r = chart.canvas.getBoundingClientRect();
-    tt.style.opacity = 1;
-    tt.style.left = (r.left + tooltip.caretX) + 'px';
-    tt.style.top = (r.top + tooltip.caretY) + 'px';
-  }
-
-  const common = {
-    responsive: true, maintainAspectRatio: false, animation: false, normalized: true,
-    elements: { point: { radius: 0, hitRadius: 5 }, line: { borderWidth: 1, tension: 0 } },
-    plugins: {
-      legend: { display: false },
-      tooltip: { enabled: false, external: tooltipHandler, mode: 'nearest', intersect: false }
-    },
-    interaction: { mode: 'nearest', axis: 'xy', intersect: false },
-    onClick: (e, els, chart) => {
-      if (shared.tools.box || shared.tools.lasso) return;
-      if (!els.length) { shared.select(-1, false); return; }
-      shared.select(chart.data.datasets[els[0].datasetIndex]._trueIndex,
-        e.native ? e.native.shiftKey : false);
-    }
-  };
-  ORDER.forEach(name => {
-    const canv = content.querySelector('.gig-stl-wrapper[data-wrap="' + name + '"] canvas');
-    charts[MAP[name]] = new Chart(canv, {
-      type: 'line', data: { labels: [], datasets: [] },
-      options: {
-        ...common,
-        scales: {
-          x: { display: false, grid: { display: false },
-               ticks: { maxTicksLimit: 10, font: { weight: 'bold' } } },
-          y: { grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false },
-               ticks: { font: { weight: 'bold' } },
-               title: { display: true, text: name === 'Season' ? 'Seasonality' : name,
-                        align: 'center', font: { size: 11, weight: 'bold' } },
-               afterFit: sc => { sc.width = 70; } }
-        },
-        plugins: { ...common.plugins,
-          title: { display: false, text: name === 'Season' ? 'Seasonality' : name } }
-      }
-    });
-  });
-
-  function axes() {
-    let last = null;
-    for (let i = ORDER.length - 1; i >= 0; i--) {
-      const w = content.querySelector('.gig-stl-wrapper[data-wrap="' + ORDER[i] + '"]');
-      if (w && !w.classList.contains('hidden')) { last = MAP[ORDER[i]]; break; }
-    }
-    Object.keys(charts).forEach(k => {
-      charts[k].options.scales.x.display = (k === last);
-      charts[k].update('none');
-    });
-  }
-  content.querySelectorAll('.gig-stl-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      btn.classList.toggle('active');
-      const w = content.querySelector('.gig-stl-wrapper[data-wrap="' + btn.dataset.comp + '"]');
-      if (w) w.classList.toggle('hidden');
-      axes();
-    });
-  });
-
-  // brushing on each panel
-  ORDER.forEach(name => {
-    const canv = content.querySelector('.gig-stl-wrapper[data-wrap="' + name + '"] canvas');
-    attachCanvasBrush(canv, shared, () => {
-      const chart = charts[MAP[name]];
-      return (box, path, useBox) => {
-        const hits = [];
-        chart.data.datasets.forEach((ds, di) => {
-          if (ds._trueIndex === undefined) return;
-          const meta = chart.getDatasetMeta(di);
-          for (let i = 0; i < meta.data.length; i++) {
-            const pt = meta.data[i];
-            if (pt.x === undefined || isNaN(pt.x)) continue;
-            if ((useBox && inBox(pt.x, pt.y, box)) ||
-                (!useBox && inLasso({ x: pt.x, y: pt.y }, path))) {
-              hits.push(ds._trueIndex); break;
-            }
-          }
-        });
-        return hits;
-      };
-    });
-  });
-
-  function update(full) {
-    if (full) {
-      const ds = { data: [], trend: [], season: [], remainder: [] };
-      let labels = null;
-      shared.state.series.forEach((d, i) => {
-        if (shared.state.isSeriesHidden(d)) return;
-        const rws = dict()[d._canonicalId] || [];
-        if (!rws.length) return;
-        if (!labels) labels = rws.map(r => r[timeVar]);
-        const st = shared.getStyle(d, i);
-        const mk = arr => ({
-          data: arr, borderColor: st.c, backgroundColor: st.c, borderWidth: st.w,
-          order: st.o, pointRadius: 0, pointHitRadius: 5, tension: 0, fill: false,
-          _trueIndex: i
-        });
-        ds.data.push(mk(rws.map(r => r[targetVar])));
-        ds.trend.push(mk(rws.map(r => r.trend)));
-        ds.season.push(mk(rws.map(r => r[seasonVar])));
-        ds.remainder.push(mk(rws.map(r => r.remainder)));
-      });
-      Object.keys(charts).forEach(k => {
-        charts[k].data.labels = labels || [];
-        charts[k].data.datasets = ds[k];
-        charts[k].update('none');
-      });
-    } else {
-      Object.values(charts).forEach(chart => {
-        chart.data.datasets.forEach(dsi => {
-          if (dsi._trueIndex === undefined) return;
-          const st = shared.getStyle(shared.state.series[dsi._trueIndex], dsi._trueIndex);
-          dsi.borderColor = st.c; dsi.backgroundColor = st.c;
-          dsi.borderWidth = st.w; dsi.order = st.o;
-        });
-        chart.update('none');
-      });
-    }
-  }
-
-  function resize(force = false) {
-    const width = Math.round(content.clientWidth);
-    const height = Math.round(content.clientHeight);
-    if (!force && width === lastWidth && height === lastHeight) return;
-    lastWidth = width;
-    lastHeight = height;
-    Object.values(charts).forEach(chart => chart.resize());
-  }
-
-  return {
-    update,
-    resize,
-    destroy() {
-      Object.values(charts).forEach(chart => chart.destroy());
-    }
-  };
-}
-
-// ---------------- gig_point renderer ----------------
-function renderPoint(content, x, shared) {
-  const rows = safeConvert(x.data);
-  const sample = rows[0] || {};
-  const features = Object.keys(sample).filter(k => typeof sample[k] === 'number');
-  const feats = {
-    X: (x.xvar && features.includes(x.xvar)) ? x.xvar : features[0],
-    Y: (x.yvar && features.includes(x.yvar)) ? x.yvar : (features[1] || features[0])
-  };
-  let pointIndexMap = [];
-  let hasUserZoomed = false;
-  let clickMoved = false;
-  let lastGridWidth = -1;
-  let lastGridHeight = -1;
-
-  content.innerHTML =
-    '<div class="gig-scatter-grid">' +
-    '<div class="gig-y-axis-area"><select class="gig-axis-select" data-role="featY"></select></div>' +
-    '<div class="gig-chart-wrap"><canvas></canvas></div>' +
-    '<div class="gig-x-axis-area"><select class="gig-axis-select" data-role="featX"></select></div>' +
-    '</div>';
-
-  ['featX', 'featY'].forEach(role => {
-    const sel = content.querySelector('[data-role="' + role + '"]');
-    features.forEach(f => {
-      const op = document.createElement('option');
-      op.value = f; op.text = f;
-      if ((role === 'featX' && f === feats.X) || (role === 'featY' && f === feats.Y)) op.selected = true;
-      sel.appendChild(op);
-    });
-    sel.addEventListener('change', e => {
-      if (role === 'featX') feats.X = e.target.value; else feats.Y = e.target.value;
-      hasUserZoomed = false;
-      update(true);
-    });
-  });
-
-  const canv = content.querySelector('.gig-chart-wrap canvas');
-  const chart = new Chart(canv, {
-    type: 'scatter',
-    data: { datasets: [{ data: [], backgroundColor: [], pointRadius: [], pointHitRadius: 6 }] },
-    options: {
-      // Fridge owns the canvas dimensions. Chart.js automatic responsive
-      // sizing would otherwise change the wrapper, trigger ResizeObserver,
-      // and start a layout feedback loop.
-      responsive: false, maintainAspectRatio: false, animation: false,
-      scales: {
-        x: { type: 'linear', ticks: { font: { weight: 'bold' } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } },
-        y: { type: 'linear', ticks: { font: { weight: 'bold' } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } }
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          enabled: false, mode: 'nearest', intersect: true,
-          external: ctx => {
-            const { tooltip } = ctx;
-            const tt = shared.tooltipEl;
-            if (tooltip.opacity === 0) { tt.style.opacity = 0; return; }
-            if (tooltip.dataPoints && tooltip.dataPoints.length) {
-              const dp = tooltip.dataPoints[0];
-              const i = pointIndexMap[dp.dataIndex];
-              const d = shared.state.series[i];
-              if (d) {
-                const col = chart.data.datasets[0].backgroundColor[dp.dataIndex];
-                tt.innerHTML = '<div style="font-weight:bold;margin-bottom:4px;">' +
-                  '<span class="gig-tooltip-swatch" style="background:' + col + '"></span>' +
-                  shared.state.label(d) + '</div>' +
-                  '<div>' + feats.X + ': ' + fmt(dp.parsed.x) + '</div>' +
-                  '<div>' + feats.Y + ': ' + fmt(dp.parsed.y) + '</div>';
-              }
-            }
-            const r = canv.getBoundingClientRect();
-            tt.style.opacity = 1;
-            tt.style.left = (r.left + tooltip.caretX) + 'px';
-            tt.style.top = (r.top + tooltip.caretY) + 'px';
-          }
-        }
-      },
-      onClick: (e, els) => {
-        if (shared.tools.box || shared.tools.lasso || clickMoved) return;
-        if (!els.length) { shared.select(-1, false); return; }
-        const i = pointIndexMap[els[0].index];
-        if (i !== undefined) shared.select(i, e.native ? e.native.shiftKey : false);
-      }
-    }
-  });
-
-  // zoom + pan (linkvis)
-  let isPanning = false, sx0, sy0;
-  shared.listen(canv, 'wheel', e => {
-    if (shared.tools.box || shared.tools.lasso) return;
-    e.preventDefault();
-    hasUserZoomed = true;
-    const f = e.deltaY > 0 ? 1.1 : 0.9;
-    const xa = chart.scales.x, ya = chart.scales.y;
-    if (!xa || !ya) return;
-    const xd = xa.getValueForPixel(e.offsetX), yd = ya.getValueForPixel(e.offsetY);
-    const xr = xa.max - xa.min, yr = ya.max - ya.min;
-    const xp = (xd - xa.min) / xr, yp = (yd - ya.min) / yr;
-    chart.options.scales.x.min = xd - xr * f * xp;
-    chart.options.scales.x.max = xd + xr * f * (1 - xp);
-    chart.options.scales.y.min = yd - yr * f * yp;
-    chart.options.scales.y.max = yd + yr * f * (1 - yp);
-    chart.update('none');
-  }, { passive: false });
-  shared.listen(canv, 'mousedown', e => {
-    if (shared.tools.box || shared.tools.lasso) return;
-    isPanning = true; clickMoved = false;
-    sx0 = e.offsetX; sy0 = e.offsetY;
-  });
-  shared.listen(window, 'mousemove', e => {
-    if (!isPanning) return;
-    const r = canv.getBoundingClientRect();
-    const cx = e.clientX - r.left, cy = e.clientY - r.top;
-    if (Math.abs(cx - sx0) < 2 && Math.abs(cy - sy0) < 2) return;
-    clickMoved = true; hasUserZoomed = true;
-    const xa = chart.scales.x, ya = chart.scales.y;
-    if (!xa || !ya) return;
-    const dx = (xa.max - xa.min) / xa.width * (cx - sx0);
-    const dy = (ya.max - ya.min) / ya.height * (cy - sy0);
-    chart.options.scales.x.min = xa.min - dx;
-    chart.options.scales.x.max = xa.max - dx;
-    chart.options.scales.y.min = ya.min + dy;
-    chart.options.scales.y.max = ya.max + dy;
-    sx0 = cx; sy0 = cy;
-    chart.update('none');
-  });
-  shared.listen(window, 'mouseup', () => { isPanning = false; });
-  shared.listen(canv, 'mouseleave', () => { isPanning = false; });
-
-  attachCanvasBrush(canv, shared, () => (box, path, useBox) => {
-    const hits = [];
-    const meta = chart.getDatasetMeta(0);
-    for (let i = 0; i < meta.data.length; i++) {
-      const pt = meta.data[i];
-      if (pt.x === undefined || isNaN(pt.x)) continue;
-      if ((useBox && inBox(pt.x, pt.y, box)) ||
-          (!useBox && inLasso({ x: pt.x, y: pt.y }, path))) {
-        if (pointIndexMap[i] !== undefined) hits.push(pointIndexMap[i]);
-      }
-    }
-    return hits;
-  });
-
-  shared.resetFns.push(() => {
-    hasUserZoomed = false;
-    delete chart.options.scales.x.min; delete chart.options.scales.x.max;
-    delete chart.options.scales.y.min; delete chart.options.scales.y.max;
-  });
-
-  function update(full) {
-    if (full) {
-      const pts = [], cols = [], rads = [];
-      pointIndexMap = [];
-      let mnx = Infinity, mxx = -Infinity, mny = Infinity, mxy = -Infinity;
-      shared.state.series.forEach((d, i) => {
-        if (shared.state.isSeriesHidden(d)) return;
-        const px = +d[feats.X], py = +d[feats.Y];
-        if (isNaN(px) || isNaN(py)) return;
-        if (px < mnx) mnx = px; if (px > mxx) mxx = px;
-        if (py < mny) mny = py; if (py > mxy) mxy = py;
-        const st = shared.getStyle(d, i);
-        pts.push({ x: px, y: py }); cols.push(st.c); rads.push(st.r);
-        pointIndexMap.push(i);
-      });
-      if (!hasUserZoomed && mnx !== Infinity) {
-        let xp = (mxx - mnx) * 0.05; if (xp === 0) xp = 1;
-        let yp = (mxy - mny) * 0.05; if (yp === 0) yp = 1;
-        chart.options.scales.x.min = mnx - xp; chart.options.scales.x.max = mxx + xp;
-        chart.options.scales.y.min = mny - yp; chart.options.scales.y.max = mxy + yp;
-      }
-      Object.assign(chart.data.datasets[0], { data: pts, backgroundColor: cols, pointRadius: rads });
-      chart.update('none');
-    } else {
-      const cols = [], rads = [];
-      pointIndexMap.forEach(i => {
-        const st = shared.getStyle(shared.state.series[i], i);
-        cols.push(st.c); rads.push(st.r);
-      });
-      chart.data.datasets[0].backgroundColor = cols;
-      chart.data.datasets[0].pointRadius = rads;
-      chart.update('none');
-    }
-  }
-
-  function resize(force = false) {
-    const style = window.getComputedStyle(content);
-    const number = property => Number.parseFloat(style[property]) || 0;
-    const availableWidth = Math.max(
-      0,
-      content.clientWidth - number('paddingLeft') - number('paddingRight')
-    );
-    const availableHeight = Math.max(
-      0,
-      content.clientHeight - number('paddingTop') - number('paddingBottom')
-    );
-    const yGutter = 44;
-    const xGutter = 36;
-    const side = Math.max(
-      0,
-      Math.floor(Math.min(
-        availableWidth - yGutter,
-        availableHeight - xGutter
-      ))
-    );
-    if (side < 1) return;
-
-    const gridWidth = side + yGutter;
-    const gridHeight = side + xGutter;
-    if (!force && gridWidth === lastGridWidth && gridHeight === lastGridHeight) {
-      return;
-    }
-    lastGridWidth = gridWidth;
-    lastGridHeight = gridHeight;
-
-    const grid = content.querySelector('.gig-scatter-grid');
-    const wrap = content.querySelector('.gig-chart-wrap');
-    grid.style.width = gridWidth + 'px';
-    grid.style.height = gridHeight + 'px';
-    wrap.style.width = side + 'px';
-    wrap.style.height = side + 'px';
-    chart.resize(side, side);
-  }
-
-  return {
-    update,
-    resize,
-    destroy() {
-      chart.destroy();
-    }
-  };
-}
-
-// Legacy implementation retained only for source compatibility during this
-// transition. It is not called: fridge uses ggelatoAPI.renderSunburst above.
-function renderSunburstLegacy(content, x, shared) {
-  shared.hasSunburst = true;
-  let treeNodes = null, radiusStep = 55;
-  let treeX = 0, treeY = 0, treeZoom = 1;
-
-  content.innerHTML =
-    '<div class="gig-sun-wrap">' +
-    '<svg viewBox="-250 -250 500 500" preserveAspectRatio="xMidYMid meet">' +
-    '<rect x="-2500" y="-2500" width="5000" height="5000" fill="transparent"></rect>' +
-    '<g class="gig-tree-group"></g></svg></div>';
-  const svg = content.querySelector('svg');
-  const wrap = content.querySelector('.gig-sun-wrap');
-
-  function initTree() {
-    let maxDepth = 0;
-    const flat = [];
-    shared.state.series.forEach((d, i) => {
-      if (shared.state.isSeriesHidden(d)) return;
-      flat.push({ ...d, _gIdx: i, children: [] });
-    });
-    const roots = [];
-    flat.forEach(n => {
-      if (n._depth > maxDepth) maxDepth = n._depth;
-      if (n._depth > 0) {
-        const p = flat.find(m => m._id === n._parentId && m._depth === n._depth - 1);
-        if (p) p.children.push(n); else roots.push(n);
-      } else roots.push(n);
-    });
-    let hr;
-    if (roots.length > 1) hr = { _id: 'VIRTUAL_ROOT', _depth: -1, children: roots };
-    else if (roots.length === 1) hr = roots[0];
-    else { treeNodes = []; return; }
-    radiusStep = Math.min(55, 170 / (maxDepth + 1));
-    const rootD3 = d3.hierarchy(hr)
-      .sum(d => (d.children && d.children.length > 0) ? 0 : 1)
-      .sort((a, b) => b.value - a.value);
-    const virt = roots.length > 1;
-    d3.partition().size([2 * Math.PI, 1])(rootD3);
-    treeNodes = rootD3.descendants()
-      .filter(d => d.data._id !== 'VIRTUAL_ROOT')
-      .map(d => {
-        const rd = virt ? d.depth - 1 : d.depth;
-        d.y0 = rd === 0 ? 0 : rd * radiusStep;
-        d.y1 = (rd + 1) * radiusStep;
-        return d;
-      });
-  }
-
-  function render() {
-    if (!treeNodes) return;
-    const g = d3.select(content).select('.gig-tree-group');
-    g.selectAll('*').remove();
-    const arc = d3.arc().startAngle(d => d.x0).endAngle(d => d.x1)
-      .innerRadius(d => d.y0).outerRadius(d => d.y1).padAngle(0);
-    const nodes = g.selectAll('g').data(treeNodes).enter().append('g');
-    nodes.append('path')
-      .attr('class', 'gig-tree-node')
-      .attr('data-gidx', d => d.data._gIdx)
-      .attr('d', arc)
-      .on('click', (e, d) => {
-        e.stopPropagation();
-        if (shared.tools.box || shared.tools.lasso) return;
-        shared.select(d.data._gIdx, e.shiftKey);
-      })
-      .on('mousemove', (e, d) => {
-        const tt = shared.tooltipEl;
-        tt.innerHTML = '<div style="font-weight:bold;">' + shared.state.label(d.data) + '</div>';
-        tt.style.opacity = 1;
-        tt.style.left = (e.clientX + 12) + 'px';
-        tt.style.top = (e.clientY + 12) + 'px';
-      })
-      .on('mouseleave', () => { shared.tooltipEl.style.opacity = 0; });
-    nodes.append('text')
-      .attr('class', 'gig-tree-label' + (shared.labelsOn.v ? ' visible' : ''))
-      .attr('transform', d => {
-        if (d.data._depth === 0) return '';
-        const a = (d.x0 + d.x1) / 2;
-        const r = d.children ? (d.y0 + d.y1) / 2 : d.y1 + 5;
-        let rot = (a * 180 / Math.PI) - 90;
-        if (rot > 90 && rot < 270) rot += 180;
-        return 'translate(' + (r * Math.sin(a)) + ',' + (-r * Math.cos(a)) + ') rotate(' + rot + ')';
-      })
-      .attr('dy', '0.35em')
-      .attr('text-anchor', d => {
-        if (d.data._depth === 0) return 'middle';
-        const rot = ((d.x0 + d.x1) / 2 * 180 / Math.PI) - 90;
-        if (!d.children) return (rot > 90 && rot < 270) ? 'end' : 'start';
-        return 'middle';
-      })
-      .text(d => {
-        let n = shared.state.label(d.data) || '';
-        const mx = !d.children ? 20 : Math.max(3, Math.floor((radiusStep - 8) / 5.4));
-        return (d.data._depth > 0 && n.length > mx) ? n.substring(0, mx - 1) + '\u2026' : n;
-      })
-      .style('font-size', d => (!d.children ? 9 : Math.max(9, 12 - d.data._depth)) + 'px')
-      .style('pointer-events', 'none');
-    style();
-  }
-
-  function style() {
-    if (!treeNodes) return;
-    treeNodes.forEach(d => {
-      const n = content.querySelector('.gig-tree-node[data-gidx="' + d.data._gIdx + '"]');
-      if (!n) return;
-      const st = shared.getStyle(d.data, d.data._gIdx);
-      n.setAttribute('fill', st.c === 'rgba(200,200,200,0.15)' ? '#e2e8f0' : st.c);
-      n.setAttribute('stroke', '#fff');
-      n.setAttribute('stroke-width', st.w);
-    });
-    content.querySelectorAll('.gig-tree-label')
-      .forEach(l => l.classList.toggle('visible', shared.labelsOn.v));
-  }
-
-  const zoomB = d3.zoom().scaleExtent([0.1, 10])
-    .filter(e => !(shared.tools.box || shared.tools.lasso) && !e.ctrlKey && !e.button)
-    .on('zoom', e => {
-      treeX = e.transform.x; treeY = e.transform.y; treeZoom = e.transform.k;
-      d3.select(content).select('.gig-tree-group').attr('transform', e.transform);
-    });
-  d3.select(svg).call(zoomB);
-  d3.select(svg).on('click', () => {
-    if (shared.tools.box || shared.tools.lasso) return;
-    shared.select(-1, false);
-  });
-  shared.resetFns.push(() => {
-    d3.select(svg).call(zoomB.transform, d3.zoomIdentity);
-    treeX = 0; treeY = 0; treeZoom = 1;
-  });
-
-  // brushing in viewBox coordinates
-  const vb = (cx, cy) => {
-    const r = svg.getBoundingClientRect();
-    const s = Math.min(r.width / 500, r.height / 500);
-    const ox = (r.width - 500 * s) / 2, oy = (r.height - 500 * s) / 2;
-    return { x: ((cx - r.left) - ox) / s - 250, y: ((cy - r.top) - oy) / s - 250 };
-  };
-  let brushing = false, path = [], shape = null;
-  svg.addEventListener('mousedown', e => {
-    if (!(shared.tools.box || shared.tools.lasso)) return;
-    brushing = true;
-    path = [vb(e.clientX, e.clientY)];
-    shape = document.createElementNS('http://www.w3.org/2000/svg', shared.tools.box ? 'rect' : 'path');
-    shape.setAttribute('fill', 'rgba(0,114,178,0.2)');
-    shape.setAttribute('stroke', '#0072B2');
-    svg.appendChild(shape);
-  });
-  window.addEventListener('mousemove', e => {
-    if (!brushing) return;
-    const c = vb(e.clientX, e.clientY);
-    path.push(c);
-    if (shared.tools.box) {
-      shape.setAttribute('x', Math.min(path[0].x, c.x));
-      shape.setAttribute('y', Math.min(path[0].y, c.y));
-      shape.setAttribute('width', Math.abs(c.x - path[0].x));
-      shape.setAttribute('height', Math.abs(c.y - path[0].y));
-    } else {
-      shape.setAttribute('d', 'M ' + path.map(p => p.x + ',' + p.y).join(' L ') + ' Z');
-    }
-  });
-  window.addEventListener('mouseup', e => {
-    if (!brushing) return;
-    brushing = false;
-    if (shape) { svg.removeChild(shape); shape = null; }
-    const useBox = shared.tools.box;
-    const box = {
-      xMin: Math.min(path[0].x, path[path.length - 1].x),
-      xMax: Math.max(path[0].x, path[path.length - 1].x),
-      yMin: Math.min(path[0].y, path[path.length - 1].y),
-      yMax: Math.max(path[0].y, path[path.length - 1].y)
-    };
-    const hits = [];
-    (treeNodes || []).forEach(d => {
-      const a = (d.x0 + d.x1) / 2;
-      [ (d.y0 + d.y1) / 2, d.y0 + 5, d.y1 - 5 ].some(rr => {
-        const vx = (rr * Math.sin(a)) * treeZoom + treeX;
-        const vy = (-rr * Math.cos(a)) * treeZoom + treeY;
-        if ((useBox && inBox(vx, vy, box)) || (!useBox && inLasso({ x: vx, y: vy }, path))) {
-          hits.push(d.data._gIdx);
-          return true;
-        }
-        return false;
-      });
-    });
-    shared.brush(hits, e.shiftKey);
-  });
-
-  function update(full) {
-    if (full) { initTree(); render(); }
-    else style();
-  }
-  return { update, resize: () => {} };
-}
-
-// Shared pixel-space brushing scaffold for canvas plots
-function attachCanvasBrush(canv, shared, makeHitTest) {
-  const wrapper = canv.parentElement;
-  const bs = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  Object.assign(bs.style, {
-    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-    pointerEvents: 'none', zIndex: 40
-  });
-  wrapper.style.position = 'relative';
-  wrapper.appendChild(bs);
-
-  let brushing = false, path = [], shape = null, sx, sy;
-  canv.addEventListener('mousedown', e => {
-    if (!(shared.tools.box || shared.tools.lasso)) return;
-    brushing = true;
-    const r = canv.getBoundingClientRect();
-    sx = e.clientX - r.left; sy = e.clientY - r.top;
-    path = [{ x: sx, y: sy }];
-    shape = document.createElementNS('http://www.w3.org/2000/svg', shared.tools.box ? 'rect' : 'path');
-    shape.setAttribute('fill', 'rgba(0,114,178,0.2)');
-    shape.setAttribute('stroke', '#0072B2');
-    bs.appendChild(shape);
-    e.stopPropagation();
-  });
-  window.addEventListener('mousemove', e => {
-    if (!brushing) return;
-    const r = canv.getBoundingClientRect();
-    const x = e.clientX - r.left, y = e.clientY - r.top;
-    path.push({ x, y });
-    if (shared.tools.box) {
-      shape.setAttribute('x', Math.min(sx, x));
-      shape.setAttribute('y', Math.min(sy, y));
-      shape.setAttribute('width', Math.abs(x - sx));
-      shape.setAttribute('height', Math.abs(y - sy));
-    } else {
-      shape.setAttribute('d', 'M ' + path.map(p => p.x + ',' + p.y).join(' L ') + ' Z');
-    }
-  });
-  window.addEventListener('mouseup', e => {
-    if (!brushing) return;
-    brushing = false;
-    if (shape) { bs.removeChild(shape); shape = null; }
-    const last = path[path.length - 1];
-    const box = {
-      xMin: Math.min(sx, last.x), xMax: Math.max(sx, last.x),
-      yMin: Math.min(sy, last.y), yMax: Math.max(sy, last.y)
-    };
-    const hits = makeHitTest()(box, path, shared.tools.box);
-    shared.brush(hits, e.shiftKey);
-  });
-}
-
-/* =====================================================================
    HTMLWIDGET BINDING
+
+   Renderers themselves (gig_stldp, gig_point, gig_sunburst) now come
+   entirely from window.ggelatoAPI - see renderStldp/renderPoint/
+   renderSunburst above. This file owns only cross-window composition:
+   the floating window manager, shared toolbar, shared hierarchy panel,
+   and the single selection Set/style pass shared across every window.
    ===================================================================== */
 
 function hierarchyRows(plots, hierarchy) {
@@ -823,7 +132,7 @@ function hierarchyRows(plots, hierarchy) {
 
   plots.forEach(plot => {
     safeConvert(plot && plot.x ? plot.x.data : null).forEach(row => {
-      // Ignore payload rows that do not carry the requested hierarchy.
+
       if (!keys.some(key => Object.prototype.hasOwnProperty.call(row, key))) return;
       const id = keys.map(key => valueId(row[key])).join('\u0001');
       merged.set(id, { ...(merged.get(id) || {}), ...row });
@@ -1478,13 +787,34 @@ function makeToolbar(root, shared, windows, manager, hierarchyMover, refresh, re
   const selectionButton = toolButton('Single selection', SVGS.single, 'selection-menu');
   const selectionMenu = document.createElement('div');
   selectionMenu.className = 'fridge-selection-menu';
-  ['single', 'multiple', 'inverse', 'hierarchy'].forEach(mode => {
+
+  function modeButton(mode) {
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.selectionMode = mode;
-    button.textContent = mode.charAt(0).toUpperCase() + mode.slice(1) + ' Selection';
-    selectionMenu.appendChild(button);
-  });
+    button.textContent = SELECTION_LABELS[mode];
+    return button;
+  }
+
+  selectionMenu.appendChild(modeButton('single'));
+  selectionMenu.appendChild(modeButton('multiple'));
+
+
+
+
+  const inverseGroup = document.createElement('div');
+  inverseGroup.className = 'fridge-has-sub';
+  inverseGroup.innerHTML =
+    '<span>Inverse Selection</span><span class="fridge-sub-arrow">&#9656;</span>';
+  const inverseSub = document.createElement('div');
+  inverseSub.className = 'fridge-selection-submenu';
+  inverseSub.appendChild(modeButton('inverse'));
+  inverseSub.appendChild(modeButton('inverseAll'));
+  inverseGroup.appendChild(inverseSub);
+  selectionMenu.appendChild(inverseGroup);
+
+  selectionMenu.appendChild(modeButton('hierarchy'));
+
   selectionWrap.appendChild(selectionButton);
   selectionWrap.appendChild(selectionMenu);
   toolbar.appendChild(selectionWrap);
@@ -1515,7 +845,8 @@ function makeToolbar(root, shared, windows, manager, hierarchyMover, refresh, re
     toolbar.appendChild(sep);
   }
 
-  const hierarchyButton = toolButton('Show or hide the shared hierarchy widget', SVGS.hierarchy, 'hierarchy-panel');
+  const hierarchyButton = toolButton(
+    'Show or hide the shared hierarchy widget', ICON_HIERARCHY_PANEL, 'hierarchy-panel');
   hierarchyButton.classList.add('active');
   toolbar.appendChild(hierarchyButton);
   let labels = null;
@@ -1551,9 +882,11 @@ function makeToolbar(root, shared, windows, manager, hierarchyMover, refresh, re
 
   function update() {
     selectionButton.innerHTML = SVGS[shared.selectionMode] || SVGS.single;
-    selectionButton.title = shared.selectionMode + ' selection';
+    selectionButton.title = 'Selection Mode: ' +
+      (SELECTION_TITLES[shared.selectionMode] || shared.selectionMode);
     selectionMenu.querySelectorAll('[data-selection-mode]').forEach(button =>
       button.classList.toggle('active-mode', button.dataset.selectionMode === shared.selectionMode));
+    inverseGroup.classList.toggle('active-mode', shared.selectionMode.startsWith('inverse'));
     box.classList.toggle('active', shared.tools.box);
     lasso.classList.toggle('active', shared.tools.lasso);
     hierarchyButton.classList.toggle('active', hierarchyMover.isVisible());
@@ -1627,15 +960,15 @@ function makeToolbar(root, shared, windows, manager, hierarchyMover, refresh, re
     dragging = false;
   });
   listen(root, 'click', event => {
-    // Use composedPath() rather than event.target.closest(): the toolbar's
-    // own click handler (registered above, and fired first since it bubbles
-    // from an inner element) may replace a clicked icon's innerHTML (e.g.
-    // update() rewriting selectionButton.innerHTML). That detaches the
-    // original event.target from the DOM, so .closest() on it can no longer
-    // walk up to find the wrapper and would incorrectly treat the click as
-    // "outside", closing the menu that was just opened. composedPath() is
-    // captured at dispatch time and stays valid even if nodes are removed
-    // mid-bubble.
+
+
+
+
+
+
+
+
+
     const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
     const within = selector => path.some(node =>
       node && node.nodeType === 1 && typeof node.matches === 'function' && node.matches(selector));
@@ -1703,7 +1036,6 @@ function buildFridge(el, value) {
 
   el.innerHTML = '';
   const cleanup = [];
-  installRuntimeStyles();
   el.dataset.fridgeBuild = FRIDGE_BUILD;
   el.classList.toggle('fridge-fullscreen-host', fullscreen);
   el.classList.toggle('fridge-embedded-host', !fullscreen);
@@ -1782,8 +1114,8 @@ function buildFridge(el, value) {
       return visible.length > 0 && visible.every(index => this.selected.has(index));
     },
     prepareStylePass() {
-      // Compute this once per redraw. Calling allVisibleSelected() from
-      // getStyle() for every mark makes a redraw quadratic in series count.
+
+
       this._styleFiltering = !this.allVisibleSelected();
     },
     getStyle(d, index) {
@@ -1801,10 +1133,17 @@ function buildFridge(el, value) {
       if (index < 0) {
         this.selectAllVisible();
       } else if (this.selectionMode === 'inverse') {
+
+
         this.selected.clear();
-        const bottomDepth = this.state.displayKeys().length;
+        const clicked = this.state.series[index];
         this.state.series.forEach((series, i) => {
-          if (i !== index && series._depth === bottomDepth) this.selected.add(i);
+          if (i !== index && series._depth === clicked._depth) this.selected.add(i);
+        });
+      } else if (this.selectionMode === 'inverseAll') {
+        this.selected.clear();
+        this.state.series.forEach((unused, i) => {
+          if (i !== index) this.selected.add(i);
         });
       } else if (this.selectionMode === 'hierarchy') {
         if (!additive) this.selected.clear();
@@ -1825,8 +1164,22 @@ function buildFridge(el, value) {
       renderSharedLegend();
     },
     brush(indices, additive) {
-      if (!additive && this.selectionMode !== 'multiple') this.selected.clear();
-      indices.forEach(index => this.selected.add(index));
+      if (this.selectionMode === 'inverse' || this.selectionMode === 'inverseAll') {
+
+
+        const hits = new Set(indices);
+        const depths = new Set(indices.map(i => this.state.series[i]._depth));
+        this.selected.clear();
+        this.state.series.forEach((series, i) => {
+          if (hits.has(i)) return;
+          if (this.selectionMode === 'inverseAll' || depths.has(series._depth)) {
+            this.selected.add(i);
+          }
+        });
+      } else {
+        if (!additive && this.selectionMode !== 'multiple') this.selected.clear();
+        indices.forEach(index => this.selected.add(index));
+      }
       refresh(false);
       renderSharedLegend();
     }
@@ -1924,8 +1277,7 @@ function buildFridge(el, value) {
   if (!hierarchyWidget) {
     throw new Error('ggelato could not create the shared hierarchy widget.');
   }
-  // The outer fridge panel owns cross-window dragging. Empty space passes
-  // through to it, while chips and menu controls remain interactive.
+
   hierarchyWidget.container.style.pointerEvents = 'none';
   const manager = createWindowManager(root, windows, hierarchyMover, resizeAll, listen);
 

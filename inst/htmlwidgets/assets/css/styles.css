@@ -1,7 +1,3 @@
-/* fridge-only composition styles. Plot and hierarchy styles are inherited
-   from the installed ggelato package by R/fridge.R. */
-
-/* ===== fridge: LinkVis-style linked multi-widget dashboard ===== */
 html.fridge-fullscreen-page,
 body.fridge-fullscreen-page {
   width: 100% !important; height: 100% !important; margin: 0 !important;
@@ -179,14 +175,19 @@ body.fridge-fullscreen-page {
 .fridge-snap-assist-card.skip { background: rgba(15,23,42,.82); color: #fff; }
 .fridge-assist-icon .gig-icon-svg { width: 28px; height: 28px; }
 
-/* Shared hierarchy panel. Its contents are rendered and styled by ggelato. */
+
 .fridge-hierarchy-panel {
   position: absolute; overflow: visible; background: #fff;
   border: 1px solid rgba(15,23,42,.07);
   z-index: 12000; width: 158px; height: 176px; min-width: 120px; min-height: 80px;
   padding: 10px; border-radius: 10px; cursor: grab;
   box-shadow: 0 5px 20px rgba(15,23,42,.16);
+  /* Held back to 80% so the panel reads as a floating overlay rather than a
+     solid box competing with the plot beneath it; sharpens on interaction. */
+  opacity: .8;
 }
+.fridge-hierarchy-panel:hover,
+.fridge-hierarchy-panel:focus-within { opacity: 1; }
 .fridge-hierarchy-panel:active { cursor: grabbing; }
 .fridge-hierarchy-panel-inner {
   position: absolute; left: 50%; top: 50%; max-height: none;
@@ -238,7 +239,7 @@ body.fridge-fullscreen-page {
 .fridge-hierarchy-resize-handle.ne,
 .fridge-hierarchy-resize-handle.sw { cursor: nesw-resize; }
 
-/* LinkVis-style movable toolbar */
+
 .fridge-toolbar {
   position: absolute; z-index: 16000; display: flex; align-items: center;
   box-sizing: border-box; color: #334155;
@@ -278,7 +279,7 @@ body.fridge-fullscreen-page {
 .fridge-toolbar-menu,
 .fridge-selection-menu {
   position: absolute; z-index: 18000; display: none; flex-direction: column;
-  min-width: 158px; padding: 5px 0; overflow: hidden;
+  min-width: 158px; padding: 5px 0; overflow: visible;
   border: 1px solid rgba(15,23,42,.1); border-radius: 8px; background: #fff;
   box-shadow: 0 8px 20px rgba(15,23,42,.2);
 }
@@ -287,12 +288,52 @@ body.fridge-fullscreen-page {
 .fridge-toolbar-menu button,
 .fridge-selection-menu button {
   width: 100%; padding: 9px 13px; border: 0; border-bottom: 1px solid #f1f5f9;
-  background: transparent; color: #334155; text-align: left; font: 500 12px inherit; cursor: pointer;
+  background: transparent; color: #334155; text-align: left; cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px; font-weight: 500;
 }
 .fridge-toolbar-menu button:hover,
 .fridge-selection-menu button:hover { background: #f4f6f8; }
 .fridge-toolbar-menu button.primary { color: #0072b2; font-weight: 700; }
 .fridge-selection-menu button.active-mode { background: #e6f3fa; color: #0072b2; font-weight: 700; }
+
+/* Nested "Inverse Selection" row and its two-way submenu. This used to be
+   injected at runtime from JS with a static element id that guarded against
+   re-injection - meaning once a browser/Viewer session had it once, later
+   fixes here were silently skipped. It is real CSS now, so it always loads
+   fresh with the stylesheet's own cache-busted dependency version. */
+.fridge-has-sub {
+  position: relative; display: flex; align-items: center;
+  justify-content: space-between; gap: 8px; width: 100%; box-sizing: border-box;
+  padding: 9px 13px; border: 0; border-bottom: 1px solid #f1f5f9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px; font-weight: 500; color: #334155;
+  white-space: nowrap; cursor: default; user-select: none;
+}
+.fridge-has-sub:hover { background: #f4f6f8; }
+.fridge-has-sub.active-mode { background: #e6f3fa; color: #0072b2; font-weight: 700; }
+.fridge-sub-arrow { font-size: 11px; opacity: .55; color: inherit; }
+.fridge-selection-submenu {
+  display: none; position: absolute; left: calc(100% + 4px); top: -6px;
+  flex-direction: column; min-width: 172px; background: #fff;
+  border: 1px solid #d7dde3; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.16); padding: 6px 0; z-index: 12050;
+}
+/* A transparent bridge over the 4px gap between the parent row and the
+   submenu, so a diagonal pointer move toward the submenu doesn't briefly
+   leave both hover targets and close it before arriving. */
+.fridge-has-sub::before {
+  content: ""; position: absolute; top: 0; left: 100%; width: 8px; height: 100%;
+}
+.fridge-has-sub:hover .fridge-selection-submenu,
+.fridge-has-sub.show-sub .fridge-selection-submenu { display: flex; }
+.fridge-selection-submenu button {
+  background: none; border: 0; text-align: left; padding: 7px 12px; cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px; font-weight: 500; color: #334155; white-space: nowrap;
+}
+.fridge-selection-submenu button:hover { background: #f4f6f8; }
+.fridge-selection-submenu button.active-mode { background: #e6f3fa; color: #0072b2; font-weight: 700; }
 .fridge-tool-dropdown { position: relative; display: flex; align-items: center; justify-content: center; }
 .fridge-tool-btn {
   position: relative; flex: 0 0 34px; width: 34px; height: 34px; padding: 0;
@@ -323,7 +364,6 @@ body.fridge-fullscreen-page {
 .fridge-toolbar.floating-horizontal .fridge-toolbar-menu,
 .fridge-toolbar.floating-horizontal .fridge-selection-menu { top: calc(100% + 6px); left: 0; }
 
-/* Original/scaled data switch appears only when a dual-data ggelato plot is supplied. */
 .fridge-data-switch {
   --fridge-switch-width: 104px;
   --fridge-switch-height: 36px;

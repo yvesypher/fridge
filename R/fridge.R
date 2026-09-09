@@ -1,10 +1,31 @@
-#' <Add Title>
+#' Compose several ggelato plots into a coordinated dashboard
 #'
-#' <Add Description>
+#' Arranges one or more `ggelato` plots into a floating-window dashboard
+#' with a shared selection, a shared hierarchy panel and a shared toolbar.
 #'
-#' @param ... One or more htmlwidgets created by `ggelato`.
-#' @param structure Optional structure specification. When `NULL`, the
-#'   structure is taken from the supplied plots.
+#' @section Accepting gig specifications:
+#' A plot can be either a built htmlwidget (via `ggelato::gig_build()`) or
+#' an unbuilt `gig` specification (from `gig(...) + geom_*(...)`).
+#' `fridge()` accepts both and builds any specification for you, so these
+#' are equivalent:
+#'
+#' ```
+#' spec <- gig(tourism_tbl) + geom_sunburst() + hierarchy((State/Region)*Purpose)
+#' fridge(gig_build(spec))
+#'
+#' fridge(spec)
+#' ```
+#'
+#' This is also the supported way to show several views at once: a single
+#' `gig()` plot takes one geom layer, and `fridge()` is the composition
+#' layer that coordinates several of them.
+#'
+#' @param ... One or more plots created by `ggelato`: either built
+#'   htmlwidgets or unbuilt `gig` specifications. Names become window
+#'   titles.
+#' @param structure Optional structure specification, either a string or
+#'   a `ggelato::hierarchy()` object. When `NULL`, the structure is taken
+#'   from the supplied plots.
 #' @param hierarchy Deprecated alias for `structure`.
 #' @param width,height Widget width and height.
 #' @param fullscreen Whether the widget should take over the complete browser
@@ -32,9 +53,20 @@ fridge <- function(..., structure = NULL, hierarchy = NULL,
   }
   structure <- structure %||% hierarchy
 
+  # `structure` may arrive as a ggelato::hierarchy() object rather than a
+  # bare string. Normalise to the string the browser payload expects.
+  structure <- fridge_structure_string(structure)
+
   if (length(plots) == 0L) {
     stop("Please input at least one ggelato plot.", call. = FALSE)
   }
+
+  # Build any unbuilt gig specifications before inspecting the widgets. This
+  # keeps every downstream step - class checks, payload extraction, the
+  # dependency walk - working on real htmlwidgets exactly as before.
+  plots <- lapply(seq_along(plots), function(i) {
+    fridge_build_plot(plots[[i]], i)
+  })
 
   supported <- c("gig_stldp", "gig_point", "gig_sunburst")
 
@@ -161,6 +193,55 @@ fridge <- function(..., structure = NULL, hierarchy = NULL,
 
 # Null-coalescing helper kept internal to avoid importing another package.
 `%||%` <- function(x, y) if (is.null(x)) y else x
+
+# Accept either a built ggelato htmlwidget or an unbuilt gig specification.
+# Specifications are built with ggelato::gig_build(); anything else is passed
+# through untouched so the existing class check reports the same error.
+fridge_build_plot <- function(plot, index) {
+  if (!inherits(plot, "gig")) return(plot)
+
+  if (!requireNamespace("ggelato", quietly = TRUE)) {
+    stop(
+      "Argument ", index, " is a <gig> plot specification, but the ggelato ",
+      "package is not available to build it.",
+      call. = FALSE
+    )
+  }
+  if (!exists("gig_build", envir = asNamespace("ggelato"), inherits = FALSE)) {
+    stop(
+      "Argument ", index, " is a <gig> plot specification, but the installed ",
+      "ggelato package does not provide gig_build(). Install the version of ",
+      "ggelato that introduced the gig() grammar, restart R, and rebuild ",
+      "the plots.",
+      call. = FALSE
+    )
+  }
+
+  ggelato::gig_build(plot)
+}
+
+# Accept a ggelato::hierarchy() object or a plain string for `structure`.
+fridge_structure_string <- function(structure) {
+  if (is.null(structure)) return(NULL)
+
+  if (inherits(structure, "gig_hierarchy")) {
+    # The object stores the normalised string in $structure. Read it
+    # directly rather than depending on a ggelato accessor, so fridge keeps
+    # working against an older installed ggelato.
+    value <- structure$structure
+    if (!is.character(value) || length(value) != 1L) {
+      stop("The supplied hierarchy object is malformed.", call. = FALSE)
+    }
+    return(value)
+  }
+
+  if (is.character(structure) && length(structure) == 1L) return(structure)
+
+  stop(
+    "`structure` must be a single string or a ggelato::hierarchy() object.",
+    call. = FALSE
+  )
+}
 
 # Append the newest dependency-asset timestamp to its declared version. This
 # makes local package reinstalls visible to RStudio Viewer and Quarto even when

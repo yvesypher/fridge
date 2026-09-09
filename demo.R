@@ -1,4 +1,4 @@
-devtools::install("../ggelato", upgrade = "never")
+devtools::install("../ggelato")
 usethis::use_package("ggelato", type = "Imports")
 
 packer::bundle()
@@ -92,11 +92,11 @@ plot1 <- gig_stldp(data = stl_u,scaled = stl_s,
           structure = "(State/Region)*Purpose")
 
 ##### sunburst ####
-plot2 <- gig_sunburst(
-  as_tibble(agg_tourism),                  # any tibble with <aggregated> key cols
-  structure = "(State/Region)*Purpose",    # fabletools syntax; NULL = inferred
-  labels    = TRUE                         # initial label visibility
-)
+tourism_sunburst <- gig(as_tibble(tourism_hts),
+                        structure = (State/Region)*Purpose) +
+  geom_sunburst(labels = TRUE)
+
+tourism_sunburst
 
 #### stl
 
@@ -106,3 +106,4 @@ plot3 <- gig_point(tourism_ft,
 #### fridge
 
 fridge(plot1,plot2,plot3)
+
