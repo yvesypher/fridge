@@ -15,44 +15,43 @@ fridge(
 )
 }
 \arguments{
-\item{...}{One or more plots created by `ggelato`: either built
-htmlwidgets or unbuilt `gig` specifications. Names become window
+\item{...}{One or more plots created by \code{ggelato}: either built
+htmlwidgets or unbuilt \code{gig} specifications. Names become window
 titles.}
 
 \item{structure}{Optional structure specification, either a string or
-a `ggelato::hierarchy()` object. When `NULL`, the structure is taken
+a \code{ggelato::hierarchy()} object. When \code{NULL}, the structure is taken
 from the supplied plots.}
 
-\item{hierarchy}{Deprecated alias for `structure`.}
+\item{hierarchy}{Deprecated alias for \code{structure}.}
 
 \item{width, height}{Widget width and height.}
 
 \item{fullscreen}{Whether the widget should take over the complete browser
-viewport. Use `FALSE` when embedding `fridge` in Quarto, Closeread,
+viewport. Use \code{FALSE} when embedding \code{fridge} in Quarto, Closeread,
 R Markdown, or another scrolling document.}
 
 \item{elementId}{Optional widget element ID.}
 }
 \description{
-Arranges one or more `ggelato` plots into a floating-window dashboard
-with a shared selection, a shared hierarchy panel and a shared toolbar.
+Arranges one or more \code{ggelato} plots into a floating-window platform
+with a shared selection, a shared hierarchy widget and a shared toolbar.
 }
 \section{Accepting gig specifications}{
 
-A plot can be either a built htmlwidget (via `ggelato::gig_build()`) or
-an unbuilt `gig` specification (from `gig(...) + geom_*(...)`).
-`fridge()` accepts both and builds any specification for you, so these
+A plot can be either a built htmlwidget (via \code{ggelato::gig_build()}) or
+an unbuilt \code{gig} specification (from \code{gig(...) + geom_*(...)}).
+\code{fridge()} accepts both and builds any specification for you, so these
 are equivalent:
 
-```
-spec <- gig(tourism_tbl) + geom_sunburst() + hierarchy((State/Region)*Purpose)
+\if{html}{\out{<div class="sourceCode">}}\preformatted{spec <- gig(tourism_tbl) + geom_sunburst() + hierarchy((State/Region)*Purpose)
 fridge(gig_build(spec))
 
 fridge(spec)
-```
+}\if{html}{\out{</div>}}
 
 This is also the supported way to show several views at once: a single
-`gig()` plot takes one geom layer, and `fridge()` is the composition
+\code{gig()} plot takes one geom layer, and \code{fridge()} is the composition
 layer that coordinates several of them.
 }
 

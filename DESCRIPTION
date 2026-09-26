@@ -27,3 +27,4 @@ VignetteBuilder: quarto
 Suggests: 
     knitr,
     quarto
+RoxygenNote: 7.3.2
