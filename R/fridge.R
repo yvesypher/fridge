@@ -1,7 +1,7 @@
 #' Compose several ggelato plots into a coordinated dashboard
 #'
-#' Arranges one or more `ggelato` plots into a floating-window dashboard
-#' with a shared selection, a shared hierarchy panel and a shared toolbar.
+#' Arranges one or more `ggelato` plots into a floating-window platform
+#' with a shared selection, a shared hierarchy widget and a shared toolbar.
 #'
 #' @section Accepting gig specifications:
 #' A plot can be either a built htmlwidget (via `ggelato::gig_build()`) or

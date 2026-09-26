@@ -18,7 +18,8 @@ Imports:
     stats,
     htmltools,
     dplyr,
-    fabletools
+    fabletools,
+    ggelato
 Depends: R (>= 2.10)
 Roxygen: list(markdown = TRUE)    
 Config/roxygen2/version: 8.1.0
