@@ -48,4 +48,4 @@ export const SELECTION_TITLES = {
   hierarchy: 'Hierarchical'
 };
 
-export const FRIDGE_BUILD = 'fridge-modules-v16-20260927';
+export const FRIDGE_BUILD = 'fridge-modules-v17-20261017';

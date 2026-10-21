@@ -138,8 +138,6 @@ export function buildFridge(el, value) {
       return indices;
     },
     prepareStylePass() {
-      // Keep the same visual convention as standalone ggelato: with no
-      // explicit selection, Total is the only series in focus.
       this._styleFiltering = this.selected.size > 0;
     },
     getStyle(d, index) {
@@ -153,34 +151,21 @@ export function buildFridge(el, value) {
           c: selected ? base : 'rgba(148,163,184,0.22)',
           w: selected ? 3 : 1.3,
           r: selected ? 7 : 3,
-          o: selected ? 0 : 100 + d._depth
+          o: selected ? 0 : 100 + d._depth,
+          focus: selected
         };
       }
 
+      const totalFocused = isTotal && !totalDimmed;
       return {
-        c: isTotal && !totalDimmed ? base : 'rgba(148,163,184,0.22)',
-        w: isTotal && !totalDimmed ? 2.2 : 1.3,
-        r: isTotal && !totalDimmed ? 5 : 3,
-        o: isTotal && !totalDimmed ? 0 : 100 + d._depth
+        c: totalFocused ? base : 'rgba(148,163,184,0.22)',
+        w: totalFocused ? 2.2 : 1.3,
+        r: totalFocused ? 5 : 3,
+        o: totalFocused ? 0 : 100 + d._depth,
+        focus: totalFocused
       };
     },
 
-    // The shared STL renderer uses these hooks to restrict hover tooltips to
-    // the series that are actually in focus. Treat the implicit Total-only
-    // state as a real selection so dimmed lines cannot steal the tooltip.
-    hasSelection() {
-      return this.selected.size > 0 || (!totalDimmed &&
-        this.state.series.some(series => series._depth === 0));
-    },
-    isSelected(index) {
-      if (this.selected.size > 0) return this.selected.has(index);
-      const series = this.state.series[index];
-      return Boolean(series && series._depth === 0 && !totalDimmed);
-    },
-
-    // Delegate selection semantics to ggelato instead of maintaining a
-    // second implementation in fridge. This keeps future selection fixes in
-    // ggelato automatically available here.
     select(index, additive) {
       api.updateGigSelection({
         state: this.state,
@@ -266,14 +251,9 @@ export function buildFridge(el, value) {
     getTotalDimmed: () => totalDimmed,
     setTotalDimmed: value => { totalDimmed = Boolean(value); },
     onSelectionChange: () => {
-      // Do not sync/rebuild the hierarchy widget for a checkbox selection.
-      // The value menu already updates its own checks; syncing here replaces
-      // the chips and closes the open expansion menu.
       refresh(false);
     },
     onStructureChange: () => {
-      // createGigHierarchyAdapter clears explicit selections when structure
-      // changes, which intentionally returns fridge to the Total-only state.
       rebuild();
       renderSharedLegend();
     },
